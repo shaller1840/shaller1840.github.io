@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>cephfs元数据缓存 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="目录树为了便于路径检索，元数据采用树的形式组织在缓存中；元数据分为3类：inode、dirfrag、dentry；一个inode可持有多个dirfrag，一个dirfrag包含多个dentry，一个dentry唯一指向一个inode；这里的dirfrag就是一个目录分片，最初的时候一个inode只持有一个dirfrag，随着用户创建更多的文件或子目录，dirfrag中的dentry就会越来越多，达">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cephfs元数据缓存">
+<meta property="og:url" content="http://example.com/2024/05/08/cephfs_mdcache/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="目录树为了便于路径检索，元数据采用树的形式组织在缓存中；元数据分为3类：inode、dirfrag、dentry；一个inode可持有多个dirfrag，一个dirfrag包含多个dentry，一个dentry唯一指向一个inode；这里的dirfrag就是一个目录分片，最初的时候一个inode只持有一个dirfrag，随着用户创建更多的文件或子目录，dirfrag中的dentry就会越来越多，达">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/05/08/cephfs_mdcache/18.png">
+<meta property="og:image" content="http://example.com/2024/05/08/cephfs_mdcache/19.png">
+<meta property="og:image" content="http://example.com/2024/05/08/cephfs_mdcache/20.png">
+<meta property="og:image" content="http://example.com/2024/05/08/cephfs_mdcache/21.png">
+<meta property="article:published_time" content="2024-05-08T13:37:03.740Z">
+<meta property="article:modified_time" content="2024-05-08T14:01:21.182Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/05/08/cephfs_mdcache/18.png">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-cephfs_mdcache" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2024/05/08/cephfs_mdcache/" class="article-date">
+  <time class="dt-published" datetime="2024-05-08T13:37:03.740Z" itemprop="datePublished">2024-05-08</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      cephfs元数据缓存
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="目录树"><a href="#目录树" class="headerlink" title="目录树"></a>目录树</h1><p>为了便于路径检索，元数据采用树的形式组织在缓存中；<br>元数据分为3类：inode、dirfrag、dentry；<br>一个inode可持有多个dirfrag，一个dirfrag包含多个dentry，一个dentry唯一指向一个inode；<br>这里的dirfrag就是一个目录分片，最初的时候一个inode只持有一个dirfrag，<br>随着用户创建更多的文件或子目录，dirfrag中的dentry就会越来越多，<br>达到一定程度后，mds就会将原有的dirfrag分裂成多个新的dirfrag，<br>令dentry重新分配到这些新的dirfrag中，以避免臃肿的目录影响存取效率；<br>dentry分布到哪一个dirfrag中，是由它的name的哈希值决定的；<br>不同的dirfrag对应不同的哈希区间，<br>哈希值落在区间内的dentry就会分配到这个dirfrag中保存；<br>只有目录类型的inode才会持有dirfrag，文件类型的inode没有。<br><img src="/2024/05/08/cephfs_mdcache/18.png"></p>
+<h1 id="日志链表"><a href="#日志链表" class="headerlink" title="日志链表"></a>日志链表</h1><p>随着元数据不断被修改，日志文件会越来越大，达到一定尺寸后，就需要早期的修改flush到元数据池中，然后释放掉相关的日志片段；<br>每当mds提交一个日志记录，日志文件的seq就会+1；<br>mds将日志分为多个LogSegment，每个LogSegment对应一个seq周期，内含多种类型的链表；<br>每个链表都串接着特定类型的元数据，这些元数据都是这个LogSegment周期内被修改过的；<br>这种组织形式的目的是为了方便在日志裁剪时，快速找到需要flush的元数据；<br>LogSegment按照seq排列，便于确定裁剪顺序；而元数据在链表上则没有排列顺序的要求；<br>如果一个元数据在多个周期都修改过，那么它只会链接到最新的LogSegment中；<br>LogSegment只会链接dirty元数据，<br>元数据经过flush变成clean状态后，<br>就会立即从LogSegment中移除；<br>当一个LogSegment上已经没有dirty元数据后，<br>与它相关的日志对象就会随之一起被删除掉。<br><img src="/2024/05/08/cephfs_mdcache/19.png"></p>
+<h1 id="缓存裁剪"><a href="#缓存裁剪" class="headerlink" title="缓存裁剪"></a>缓存裁剪</h1><p>mds以dentry为单位管理LRU，当缓存尺寸超过阈值时，mds就会将靠近LRU尾部的dentry从缓存释放掉；<br>新加入LRU的dentry，会插入到LRU中间3:7的位置，这会将该位置后的dentry向后挤，超过边界的dentry就会被裁剪掉；<br>可见位于插入点之前的dentry会相对安全一些，新插入的dentry并不会动摇它们的地位;<br><img src="/2024/05/08/cephfs_mdcache/20.png"><br>如果一个dentry已经在LRU中，且最近被访问过，那么就会被执行touch操作，提升到LRU头部的位置；<br>虽然touch操作不会改变LRU长度，但是它会将前半部的一个dentry挤到后半部，使之出现被裁剪的风险；<br><img src="/2024/05/08/cephfs_mdcache/21.png"><br>考虑到新加入的dentry可能只是一时热度，后续不再访问，而那些反复访问的dentry才具有常驻热度；<br>为了避免新来的dentry干扰常驻dentry的优先级，将LRU分成2个部分使得这两类dentry分开竞争。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2024/05/08/cephfs_mdcache/" data-id="clw7mke5d00043deq44nihjdd" data-title="cephfs元数据缓存" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2024/05/13/sst/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          rocksdb SST格式
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2024/05/07/cephfs_object/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">cephfs存储格式</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/18/references/">好文推荐</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/13/sst/">rocksdb SST格式</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2024 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

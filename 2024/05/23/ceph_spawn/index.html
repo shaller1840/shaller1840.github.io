@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>ceph spawn | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="概述从ceph P版本开始，引入了一个spawn组件，用来实现协程相关的功能。这个组件实际上是复制于boost::asio，而boost打算在未来抛弃spawn这部分代码，换成其他实现形式，因此ceph不得不把这部分代码备份到自己的项目中。 spawnspawn方法用于将一个用户自定义函数封装成一个协程来运行 12345678910template &lt;typename Function, t">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ceph spawn">
+<meta property="og:url" content="http://example.com/2024/05/23/ceph_spawn/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="概述从ceph P版本开始，引入了一个spawn组件，用来实现协程相关的功能。这个组件实际上是复制于boost::asio，而boost打算在未来抛弃spawn这部分代码，换成其他实现形式，因此ceph不得不把这部分代码备份到自己的项目中。 spawnspawn方法用于将一个用户自定义函数封装成一个协程来运行 12345678910template &lt;typename Function, t">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/05/23/ceph_spawn/jump_fcontext.png">
+<meta property="og:image" content="http://example.com/2024/05/23/ceph_spawn/jump_fcontext2.png">
+<meta property="og:image" content="http://example.com/2024/05/23/ceph_spawn/3.png">
+<meta property="og:image" content="http://example.com/2024/05/23/ceph_spawn/4.png">
+<meta property="article:published_time" content="2024-05-24T01:34:13.295Z">
+<meta property="article:modified_time" content="2024-05-27T16:37:22.314Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/05/23/ceph_spawn/jump_fcontext.png">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-ceph_spawn" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2024/05/23/ceph_spawn/" class="article-date">
+  <time class="dt-published" datetime="2024-05-24T01:34:13.295Z" itemprop="datePublished">2024-05-23</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      ceph spawn
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>从ceph P版本开始，引入了一个spawn组件，用来实现协程相关的功能。这个组件实际上是复制于boost::asio，而boost打算在未来抛弃spawn这部分代码，换成其他实现形式，因此ceph不得不把这部分代码备份到自己的项目中。</p>
+<h1 id="spawn"><a href="#spawn" class="headerlink" title="spawn"></a>spawn</h1><p>spawn方法用于将一个用户自定义函数封装成一个协程来运行</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Function, typename ExecutionContext, typename StackAllocator&gt;</span><br><span class="line">auto spawn(ExecutionContext&amp; ctx, Function&amp;&amp; function, StackAllocator&amp;&amp; salloc)</span><br><span class="line">  -&gt; typename std::enable_if&lt;std::is_convertible&lt;</span><br><span class="line">       ExecutionContext&amp;, detail::net::execution_context&amp;&gt;::value &amp;&amp;</span><br><span class="line">       detail::is_stack_allocator&lt;typename std::decay&lt;StackAllocator&gt;::type&gt;::value&gt;::type</span><br><span class="line">&#123;</span><br><span class="line">  spawn(ctx.get_executor(),</span><br><span class="line">      std::forward&lt;Function&gt;(function),</span><br><span class="line">      std::forward&lt;StackAllocator&gt;(salloc));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述方法接收3个参数：ExecutionContext、Function、StackAllocator；<br>其中，ExecutionContext可以是一个boost::asio::io_context实例，作为调度上下文；<br>StackAllocator用于申请内存作为协程栈，它决定了栈的位置和大小, StackAllocator可以不指定，默认为boost::context::default_stack<br>上述方法从ExecutionContext中取得Executor（调度队列），再传递给spawn的另一重载形式</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Function, typename Executor, typename StackAllocator&gt;</span><br><span class="line">auto spawn(const Executor&amp; ex, Function&amp;&amp; function, StackAllocator&amp;&amp; salloc)</span><br><span class="line">  -&gt; typename std::enable_if&lt;detail::net::is_executor&lt;Executor&gt;::value &amp;&amp;</span><br><span class="line">       detail::is_stack_allocator&lt;typename std::decay&lt;StackAllocator&gt;::type&gt;::value&gt;::type</span><br><span class="line">&#123;</span><br><span class="line">  spawn(detail::net::strand&lt;Executor&gt;(ex),</span><br><span class="line">      std::forward&lt;Function&gt;(function),</span><br><span class="line">      std::forward&lt;StackAllocator&gt;(salloc));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述重载形式会将Executor进一步封装成strand<Executor>传给下一个重载形式，strand<Executor>本质上也是一种调度队列，它与常规的Executor不同之处在于，常规的Executor支持多线程并发取任务执行，而strand<Executor>只支持顺序执行，不存在多任务并发的情况，适合任务间有顺序要求的场景。<br>这里使用strand<Executor>是为了在任务投递到相同队列的情况下，确保协程任务的后半段不会先于前半段执行，并且创建的子任务按顺序执行（减少资源竞争）。</Executor></Executor></Executor></Executor></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Function, typename Executor, typename StackAllocator&gt;</span><br><span class="line">auto spawn(const detail::net::strand&lt;Executor&gt;&amp; ex,</span><br><span class="line">           Function&amp;&amp; function, StackAllocator&amp;&amp; salloc)</span><br><span class="line">  -&gt; typename std::enable_if&lt;detail::is_stack_allocator&lt;</span><br><span class="line">       typename std::decay&lt;StackAllocator&gt;::type&gt;::value&gt;::type</span><br><span class="line">&#123;</span><br><span class="line">  spawn(bind_executor(ex, &amp;detail::default_spawn_handler),</span><br><span class="line">      std::forward&lt;Function&gt;(function),</span><br><span class="line">      std::forward&lt;StackAllocator&gt;(salloc));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述重载形式将strand<Executor> 绑定到一个default_spawn_handler上再传递到下一重载形式，default_spawn_handler是个空函数对象，仅作占位用途。<br>这里为什么选择将两个参数绑定到一起，而不是分别传递，可能是为了减少函数签名的复杂度。</Executor></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler, typename Function, typename StackAllocator&gt;</span><br><span class="line">auto spawn(Handler&amp;&amp; handler, Function&amp;&amp; function, StackAllocator&amp;&amp; salloc)</span><br><span class="line">  -&gt; typename std::enable_if&lt;!detail::net::is_executor&lt;typename std::decay&lt;Handler&gt;::type&gt;::value &amp;&amp;</span><br><span class="line">       !std::is_convertible&lt;Handler&amp;, detail::net::execution_context&amp;&gt;::value &amp;&amp;</span><br><span class="line">       !detail::is_stack_allocator&lt;typename std::decay&lt;Function&gt;::type&gt;::value &amp;&amp;</span><br><span class="line">       detail::is_stack_allocator&lt;typename std::decay&lt;StackAllocator&gt;::type&gt;::value&gt;::type</span><br><span class="line">&#123;</span><br><span class="line">  using handler_type = typename std::decay&lt;Handler&gt;::type;</span><br><span class="line">  using function_type = typename std::decay&lt;Function&gt;::type;</span><br><span class="line"></span><br><span class="line">  auto ex = detail::net::get_associated_executor(handler);</span><br><span class="line">  auto a = detail::net::get_associated_allocator(handler);</span><br><span class="line"></span><br><span class="line">  detail::spawn_helper&lt;handler_type, function_type, StackAllocator&gt; helper;</span><br><span class="line">  helper.data_ = std::make_shared&lt;</span><br><span class="line">      detail::spawn_data&lt;handler_type, function_type, StackAllocator&gt; &gt;(</span><br><span class="line">        std::forward&lt;Handler&gt;(handler), true,</span><br><span class="line">        std::forward&lt;Function&gt;(function),</span><br><span class="line">        std::forward&lt;StackAllocator&gt;(salloc));</span><br><span class="line"></span><br><span class="line">  ex.dispatch(helper, a);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终spawn会调用到首参数为Handler的重载形式，这个重载形式真正实现了spawn的逻辑。<br>它先从Handler上取得绑定的调度队列和内存分配器，加上Function、StackAllocator和Handler自身构建一个spawn_data。这个spawn_data就代表了一个协程的完整信息。<br>spawn_helper是一个可调用对象，作为协程启动器来使用，它将spawn_data包含进去，在执行时会依据spawn_data提供的信息，负责构建并运行协程。<br>这里将spawn_helper作为一个任务投递到队列中，由后台线程调度执行。</p>
+<h1 id="spawn-helper"><a href="#spawn-helper" class="headerlink" title="spawn_helper"></a>spawn_helper</h1><p>spawn_helper的具体实现如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler, typename Function, typename StackAllocator&gt;</span><br><span class="line">struct spawn_helper</span><br><span class="line">&#123;</span><br><span class="line">  void operator()()</span><br><span class="line">  &#123;</span><br><span class="line">    callee_.reset(new continuation_context());</span><br><span class="line">    callee_-&gt;context_ = boost::context::callcc(</span><br><span class="line">        std::allocator_arg, std::move(data_-&gt;salloc_),</span><br><span class="line">        [this] (boost::context::continuation&amp;&amp; c)</span><br><span class="line">        &#123;</span><br><span class="line">          std::shared_ptr&lt;spawn_data&lt;Handler, Function, StackAllocator&gt; &gt; data = data_;</span><br><span class="line">          data-&gt;caller_.context_ = std::move(c);</span><br><span class="line">          const basic_yield_context&lt;Handler&gt; yh(callee_, data-&gt;caller_, data-&gt;handler_);</span><br><span class="line">          try</span><br><span class="line">          &#123;</span><br><span class="line">            (data-&gt;function_)(yh);</span><br><span class="line">            if (data-&gt;call_handler_)</span><br><span class="line">            &#123;</span><br><span class="line">              (data-&gt;handler_)();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">          catch (const boost::context::detail::forced_unwind&amp; e)</span><br><span class="line">          &#123;</span><br><span class="line">            throw; // must allow forced_unwind to propagate</span><br><span class="line">          &#125;</span><br><span class="line">          catch (...)</span><br><span class="line">          &#123;</span><br><span class="line">            auto callee = yh.callee_.lock();</span><br><span class="line">            if (callee)</span><br><span class="line">              callee-&gt;eptr_ = std::current_exception();</span><br><span class="line">          &#125;</span><br><span class="line">          boost::context::continuation caller = std::move(data-&gt;caller_.context_);</span><br><span class="line">          data.reset();</span><br><span class="line">          return caller;</span><br><span class="line">        &#125;);</span><br><span class="line">    if (callee_-&gt;eptr_)</span><br><span class="line">      std::rethrow_exception(std::move(callee_-&gt;eptr_));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::shared_ptr&lt;continuation_context&gt; callee_;</span><br><span class="line">  std::shared_ptr&lt;spawn_data&lt;Handler, Function, StackAllocator&gt; &gt; data_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>spawn_helper使用boost::context::callcc创建协程栈，并将一个lambda函数放在栈上运行。<br>可以看到在spawn_helper的lambda函数中，它先将spawn_data的共享指针缓存到协程栈上，避免协程信息丢失。（spawn_helper在运行完协程第一段后就会销毁掉，不能再依赖它维护spawn_data）。<br>然后基于现有信息创建了一个basic_yield_context传递给function，这个yield_context会贯穿整个协程流程，作为协程切换的句柄。<br>handler放在function之后执行，用于处理一些用户自定义的善后工作，也可以什么也不做。<br>可以注意到协程运行过程中抛出的异常，不会直接在协程上下文中处理，而是封装成一个exception_ptr，在协程调度完毕后，由协程的调用者来抛出异常。<br>spawn_helper只会运行协程的第一段逻辑，在协程第一次阻塞后，spawn_helper就会从boost::context::callcc的调用逻辑中返回。由boost::context::callcc创建的协程句柄会保存在spawn_helper的callee_变量上。<br>callee_变量被lambda函数捕获，并将其记录到yield_context上，加上lambda函数的入参构建的caller_变量，此时调用者和协程的上下文都能被yield_context索引到。</p>
+<h1 id="spawn-data"><a href="#spawn-data" class="headerlink" title="spawn_data"></a>spawn_data</h1><p>spawn_data的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler, typename Function, typename StackAllocator&gt;</span><br><span class="line">struct spawn_data</span><br><span class="line">&#123;</span><br><span class="line">  Handler handler_;</span><br><span class="line">  bool call_handler_;</span><br><span class="line">  Function function_;</span><br><span class="line">  StackAllocator salloc_;</span><br><span class="line">  continuation_context caller_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>Hanlder、Function、StackAllocator这些协程要素都由spawn_data维护生存期。<br>caller_ 对应调用者上下文，它的生存期也由spawn_data维护，</p>
+<h1 id="basic-yield-context"><a href="#basic-yield-context" class="headerlink" title="basic_yield_context"></a>basic_yield_context</h1><p>basic_yield_context的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler&gt;</span><br><span class="line">class basic_yield_context</span><br><span class="line">&#123;</span><br><span class="line">public:</span><br><span class="line">  std::weak_ptr&lt;detail::continuation_context&gt; callee_;</span><br><span class="line">  detail::continuation_context&amp; caller_;</span><br><span class="line">  Handler handler_;</span><br><span class="line">  boost::system::error_code* ec_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>callee_对应协程上下文；<br>caller_对应调用者上下文；<br>handler_放在basic_yield_context中主要是为了方便取得executor 和 allocator;<br>ec_用于记录错误码，外部流程可以在唤醒协程前，将自己收集到的错误记录于此通知协程，以便于中止协程。</p>
+<h1 id="async-completion"><a href="#async-completion" class="headerlink" title="async_completion"></a>async_completion</h1><p>STL 提供了promise 和 future 来实现多线程间的消息通知。<br>而为了能兼容更宽泛的消息通知形式（比如协程），boost提供了async_completion模板来构造消息的接收方和发送方。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename CompletionToken, BOOST_ASIO_COMPLETION_SIGNATURE Signature&gt;</span><br><span class="line">struct async_completion &#123;</span><br><span class="line">  /// The real handler type to be used for the asynchronous operation.</span><br><span class="line">  typedef typename boost::asio::async_result&lt;</span><br><span class="line">    typename decay&lt;CompletionToken&gt;::type,</span><br><span class="line">      Signature&gt;::completion_handler_type completion_handler_type;</span><br><span class="line"></span><br><span class="line">  explicit async_completion(typename decay&lt;CompletionToken&gt;::type&amp; token)</span><br><span class="line">    : completion_handler(token),</span><br><span class="line">      result(completion_handler)</span><br><span class="line">  &#123;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  /// A copy of, or reference to, a real handler object.</span><br><span class="line">  completion_handler_type completion_handler;</span><br><span class="line"></span><br><span class="line">  /// The result of the asynchronous operation&#x27;s initiating function.</span><br><span class="line">  async_result&lt;typename decay&lt;CompletionToken&gt;::type, Signature&gt; result;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在这里，使用result作为消息的接收方，对应future；<br>使用completion_handler作为消息的发送方，对应promise。</p>
+<p>async_completion有2个模板参数：CompletionToken 和 Signature。<br>CompletionToken 包含了初始化所需的必要信息，它决定了async_completion的实例化类型；<br>Signature 是函数签名，对应了completion_handler 的调用形式，决定了消息的定义结构。</p>
+<p>async_completion 初始化流程如下：</p>
+<ol>
+<li>根据CompletionToken类型找到对应的async_result模板, 决定result的类型；</li>
+<li>从async_result模板得知对应的 completion_handler 的类型；</li>
+<li>使用CompletionToken 初始化completion_handler；</li>
+<li>使用completion_handler 初始化result；</li>
+</ol>
+<h1 id="coro-async-result、coro-handler"><a href="#coro-async-result、coro-handler" class="headerlink" title="coro_async_result、coro_handler"></a>coro_async_result、coro_handler</h1><p>下面以yield_context作为CompletionToken，举例说明async_completion的效果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler&gt;</span><br><span class="line">void my_func(basic_yield_context&lt;Handler&gt; yield) &#123;</span><br><span class="line">  // 基于yield_context构建异步上下文completion</span><br><span class="line">  boost::asio::async_completion&lt;</span><br><span class="line">    basic_yield_context&lt;Handler&gt;, void()</span><br><span class="line">  &gt; completion(yield);</span><br><span class="line"></span><br><span class="line">  // 从异步上下文completion中取出completion_handler传递给异步流程</span><br><span class="line">  auto async_thread = thread(</span><br><span class="line">    [completion_handler=completion.completion_handler]&#123;</span><br><span class="line">      sleep(5);</span><br><span class="line">      // 异步流程将completion_handler作为回调函数，投递到调度队列去重新运行协程</span><br><span class="line">      auto executor = boost::asio::get_associated_executor(completion_handler);</span><br><span class="line">      auto allocator = boost::asio::get_associated_allocator(completion_handler);</span><br><span class="line">      executor.post(move(completion_handler), allocator);</span><br><span class="line">    &#125;);</span><br><span class="line">  async_thread.detach();</span><br><span class="line"></span><br><span class="line">  // 当前流程使用completion.result进行等待，由completion_handler唤醒</span><br><span class="line">  completion.result.get();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当yield_context作为CompletionToken时，找到的async_result模板如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler, typename ReturnType&gt;</span><br><span class="line">class SPAWN_NET_NAMESPACE::async_result&lt;spawn::basic_yield_context&lt;Handler&gt;, ReturnType()&gt;</span><br><span class="line">  : public spawn::detail::coro_async_result&lt;Handler, void&gt;</span><br><span class="line">&#123;</span><br><span class="line">public:</span><br><span class="line">  explicit async_result(</span><br><span class="line">    typename spawn::detail::coro_async_result&lt;Handler,</span><br><span class="line">      void&gt;::completion_handler_type&amp; h)</span><br><span class="line">    : spawn::detail::coro_async_result&lt;Handler, void&gt;(h)</span><br><span class="line">  &#123;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">template &lt;typename Handler&gt;</span><br><span class="line">class coro_async_result&lt;Handler, void&gt;</span><br><span class="line">&#123;</span><br><span class="line">public:</span><br><span class="line">  using completion_handler_type = coro_handler&lt;Handler, void&gt;;</span><br><span class="line">  using return_type = void;</span><br><span class="line"></span><br><span class="line">  explicit coro_async_result(completion_handler_type&amp; h)</span><br><span class="line">    : handler_(h),</span><br><span class="line">      caller_(h.caller_),</span><br><span class="line">      ready_(2)</span><br><span class="line">  &#123;</span><br><span class="line">    h.ready_ = &amp;ready_;</span><br><span class="line">    out_ec_ = h.ec_;</span><br><span class="line">    if (!out_ec_) h.ec_ = &amp;ec_;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  void get()</span><br><span class="line">  &#123;</span><br><span class="line">    // Must not hold shared_ptr while suspended.</span><br><span class="line">    handler_.callee_.reset();</span><br><span class="line"></span><br><span class="line">    if (--ready_ != 0)</span><br><span class="line">      caller_.resume(); // suspend caller</span><br><span class="line">    if (!out_ec_ &amp;&amp; ec_) throw boost::system::system_error(ec_);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">private:</span><br><span class="line">  completion_handler_type&amp; handler_;</span><br><span class="line">  continuation_context&amp; caller_;</span><br><span class="line">  std::atomic&lt;long&gt; ready_;</span><br><span class="line">  boost::system::error_code* out_ec_;</span><br><span class="line">  boost::system::error_code ec_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>可见 yield_context 将async_result模板实例化成一个coro_async_result类型。<br>coro_async_result 初始化时会将自己的ready_、ec_成员共享给completion_handler，而completion_handler把自己的caller_成员共享给coro_async_result。<br>当我们调用coro_async_result的get方法时，它会先将handler_的callee_清空，所以必须在调用前，把completion_handler转移到其他地方。<br>然后它会使用ready_的值来判断get 和 completion_handler的先后顺序，ready_初始值为2，get 和 completion_handler都会令它的值减一，最终归0。<br>如果是get先调用，那么ready_会下降到1，此时需要通过caller_.resume方法，切回调用者上下文，阻塞协程逻辑，等待下一步唤醒；如果是completion_handler先执行，那么那么ready_会下降到0，此时不需要切换协程，继续运行当前流程即可。</p>
+<p>coro_async_result 对应的completion_handler类型为coro_handler：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Handler&gt;</span><br><span class="line">class coro_handler&lt;Handler, void&gt;</span><br><span class="line">&#123;</span><br><span class="line">public:</span><br><span class="line">  coro_handler(basic_yield_context&lt;Handler&gt; ctx)</span><br><span class="line">    : callee_(ctx.callee_.lock()),</span><br><span class="line">      caller_(ctx.caller_),</span><br><span class="line">      handler_(ctx.handler_),</span><br><span class="line">      ready_(0),</span><br><span class="line">      ec_(ctx.ec_)</span><br><span class="line">  &#123;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  void operator()()</span><br><span class="line">  &#123;</span><br><span class="line">    *ec_ = boost::system::error_code();</span><br><span class="line">    if (--*ready_ == 0)</span><br><span class="line">      callee_-&gt;resume();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  void operator()(boost::system::error_code ec)</span><br><span class="line">  &#123;</span><br><span class="line">    *ec_ = ec;</span><br><span class="line">    if (--*ready_ == 0)</span><br><span class="line">      callee_-&gt;resume();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">//private:</span><br><span class="line">  std::shared_ptr&lt;continuation_context&gt; callee_;</span><br><span class="line">  continuation_context&amp; caller_;</span><br><span class="line">  Handler handler_;</span><br><span class="line">  std::atomic&lt;long&gt;* ready_;</span><br><span class="line">  boost::system::error_code* ec_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>coro_handler初始化时，从basic_yield_context复制了一份callee_的强引用，确保callee_不会在回调完成前析构掉。这也是为何basic_yield_context只保留callee_弱引用的原因，因为协程总会在切出前把callee_的强引用复制给一个completion_handler，basic_yield_context只需发挥一个桥梁的作用，将callee_的引用过渡给新的流程。<br>coro_handler还需要从basic_yield_context取得caller_引用记录下来，待会传递给coro_async_result使用。<br>coro_handler被调用时，它会判断ready_值，当ready_下降到0时，意味者result.get已被调用，那么执行callee_-&gt;resume方法，跳转到协程上下文继续运行；如果ready_不为0，意味着协程还没有陷入阻塞，不必唤醒，什么也不做。</p>
+<p>async_result 和 completion_handler 是成对的，两者都是不可重入类型，只能调用一次，能在一定程度上容忍乱序执行，但是还存在一个缺陷，复现过程如下：<br>（1）线程1：执行result.get，–*ready_ &#x3D;&#x3D; 1；<br>（2）线程2：执行completion_handler，–*ready_ &#x3D;&#x3D; 0；<br>（3）线程2：执行callee_-&gt;resume()，但是此时线程1尚未让出协程执行权，触发断言错误崩溃<br>（4）线程1：执行caller_.resume()</p>
+<p>因此最好使用strand或其他方法来确保completion_handler 和 result.get 不会同时执行。</p>
+<h1 id="continuation-context"><a href="#continuation-context" class="headerlink" title="continuation_context"></a>continuation_context</h1><p>上面提到的callee 和 caller 都属于continuation_context类型，它们分别代表协程上下文和调用者上下文。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">class continuation_context</span><br><span class="line">&#123;</span><br><span class="line">public:</span><br><span class="line">  boost::context::continuation context_;</span><br><span class="line">  std::exception_ptr eptr_;</span><br><span class="line"></span><br><span class="line">  void resume()</span><br><span class="line">  &#123;</span><br><span class="line">    context_ = context_.resume();</span><br><span class="line"></span><br><span class="line">    if (eptr_)</span><br><span class="line">      std::rethrow_exception(std::move(eptr_));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这个结构体比较简单，它是对boost::context::continuation的封装，主要是增加了一个exception_ptr成员，用来保存协程运行过程中抛出的异常，等到流程返回调用者上下文后，再将异常抛出，避免在协程栈上做回溯动作，造成不可控制的后果（协程目前只处理了forced_unwind类型的异常，其他类型的异常可能会一直向上回溯，突破栈的界限）。<br>通过调用continuation::resume函数来跳转到目标上下文运行，当context_对应协程上下文时，是切入协程；当context_对应调用者上下文时，是切出协程。<br>在resume运行期间context_会被置为空；仅当resume完毕后才会返回一个新的continuation赋予context_，达到更新上下文地址的目的，同时也能在一定程度上避免多线程运行在同一个上下文。</p>
+<h1 id="continuation"><a href="#continuation" class="headerlink" title="continuation"></a>continuation</h1><p>continuation的定义也很简单，它是对fcontext_t的封装：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">class continuation &#123;</span><br><span class="line">private:</span><br><span class="line">  detail::fcontext_t  fctx_&#123; nullptr &#125;;</span><br><span class="line"></span><br><span class="line">  continuation( detail::fcontext_t fctx) noexcept :</span><br><span class="line">      fctx_&#123; fctx &#125; &#123;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  continuation resume() &amp; &#123;</span><br><span class="line">      return std::move( * this).resume();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  continuation resume() &amp;&amp; &#123;</span><br><span class="line">      BOOST_ASSERT( nullptr != fctx_);</span><br><span class="line">      return &#123; detail::jump_fcontext(</span><br><span class="line">                  std::exchange( fctx_, nullptr),</span><br><span class="line">                  nullptr).fctx &#125;;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里fcontext_t是一个void*类型，它对应目标上下文的栈顶地址，continuation::resume就是通过jump_fcontext切换上下文。<br>可以注意到在将fctx_传给jump_fcontext后，fctx_就被交换为空值；在jump_fcontext返回新的fctx后，才重构一个新的continuation输出，以此来转移协程执行权。</p>
+<h1 id="jump-fcontext"><a href="#jump-fcontext" class="headerlink" title="jump_fcontext"></a>jump_fcontext</h1><p>jump_fcontext的函数签名如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">typedef void*   fcontext_t;</span><br><span class="line"></span><br><span class="line">struct transfer_t &#123;</span><br><span class="line">    fcontext_t  fctx;</span><br><span class="line">    void    *   data;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">transfer_t jump_fcontext( fcontext_t const to, void * vp);</span><br></pre></td></tr></table></figure>
+<p>jump_fcontext是一个用汇编代码实现的函数，它的效果是切换到目标上下文继续运行，具体步骤如下：</p>
+<ol>
+<li>保存当前的寄存器值到栈上（入栈）</li>
+<li>复制SP寄存器的值到AX寄存器上（准备返回值1）</li>
+<li>用参数to重置SP寄存器的值（切栈）</li>
+<li>从新的栈上还原寄存器值 （出栈）</li>
+<li>将参数vp的值保存到DX寄存器上 （准备返回值2）</li>
+<li>复制AX寄存器的值（源栈顶地址）到DI寄存器上 （准备调用参数1，后面介绍）</li>
+<li>从新的栈上取出返回地址，使用jmp指令跳转到目标流程继续运行 （函数返回）</li>
+</ol>
+<p>这个函数的效果可以分2个视角来看待：</p>
+<ol>
+<li>线程的视角：jump_fcontext将当前线程的栈切换为参数to给定的栈，运行地址也切换为新的，它把原来的栈顶地址和参数vp通过返回值的形式传输到新的上下文，这样就实现了2个上下文间的消息传递，并且新的上下文拥有源栈顶地址可以随时跳转回去。<br><img src="/2024/05/23/ceph_spawn/jump_fcontext.png"></li>
+<li>函数的视角：jump_fcontext似乎和普通的函数没什么区别，它可以用于唤醒参数to代表的目标上下文继续运行，并将参数vp作为消息发送过去，然后当前流程会一直阻塞在jump_fcontext这里，直至收到消息被唤醒，此时jump_fcontext会返回发送方的上下文地址fctx以及消息data。<br><img src="/2024/05/23/ceph_spawn/jump_fcontext2.png"></li>
+</ol>
+<h1 id="callcc"><a href="#callcc" class="headerlink" title="callcc"></a>callcc</h1><p>boost::context::callcc 用于将给定的函数封装到协程中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename StackAlloc, typename Fn &gt;</span><br><span class="line">continuation</span><br><span class="line">callcc( std::allocator_arg_t, StackAlloc &amp;&amp; salloc, Fn &amp;&amp; fn) &#123;</span><br><span class="line">    using Record = detail::record&lt; continuation, StackAlloc, Fn &gt;;</span><br><span class="line">    return continuation&#123;</span><br><span class="line">                detail::create_context1&lt; Record &gt;(</span><br><span class="line">                        std::forward&lt; StackAlloc &gt;( salloc), std::forward&lt; Fn &gt;( fn) ) &#125;.resume();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个函数主要做了几件事：</p>
+<ol>
+<li>使用create_context1创建协程，返回协程栈顶地址</li>
+<li>用协程栈顶地址初始化一个continuation</li>
+<li>调用continuation的resume方法运行协程</li>
+<li>返回运行后的新continuation（封装了新的协程栈顶地址）</li>
+</ol>
+<h1 id="create-context1"><a href="#create-context1" class="headerlink" title="create_context1"></a>create_context1</h1><p>create_context1函数的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename Record, typename StackAlloc, typename Fn &gt;</span><br><span class="line">fcontext_t create_context1( StackAlloc &amp;&amp; salloc, Fn &amp;&amp; fn) &#123;</span><br><span class="line">  auto sctx = salloc.allocate();</span><br><span class="line">  // reserve space for control structure</span><br><span class="line">  void * storage = reinterpret_cast&lt; void * &gt;(</span><br><span class="line">      ( reinterpret_cast&lt; uintptr_t &gt;( sctx.sp) - static_cast&lt; uintptr_t &gt;( sizeof( Record) ) ) &amp; ~static_cast&lt; uintptr_t &gt;( 0xff) );</span><br><span class="line">  // placment new for control structure on context stack</span><br><span class="line">  Record * record = new ( storage) Record&#123;</span><br><span class="line">          sctx, std::forward&lt; StackAlloc &gt;( salloc), std::forward&lt; Fn &gt;( fn) &#125;;</span><br><span class="line">  // 64byte gab between control structure and stack top</span><br><span class="line">  // should be 16byte aligned</span><br><span class="line">  void * stack_top = reinterpret_cast&lt; void * &gt;(</span><br><span class="line">          reinterpret_cast&lt; uintptr_t &gt;( storage) - static_cast&lt; uintptr_t &gt;( 64) );</span><br><span class="line">  void * stack_bottom = reinterpret_cast&lt; void * &gt;(</span><br><span class="line">          reinterpret_cast&lt; uintptr_t &gt;( sctx.sp) - static_cast&lt; uintptr_t &gt;( sctx.size) );</span><br><span class="line">  // create fast-context</span><br><span class="line">  const std::size_t size = reinterpret_cast&lt; uintptr_t &gt;( stack_top) - reinterpret_cast&lt; uintptr_t &gt;( stack_bottom);</span><br><span class="line">  const fcontext_t fctx = make_fcontext( stack_top, size, &amp; context_entry&lt; Record &gt;);</span><br><span class="line">  BOOST_ASSERT( nullptr != fctx);</span><br><span class="line">  // transfer control structure to context-stack</span><br><span class="line">  return jump_fcontext( fctx, record).fctx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它的步骤可以简要描述为：</p>
+<ol>
+<li>使用参数StackAlloc分配了一块内存，使用内存的尾部作为栈顶（栈向低地址延伸）</li>
+<li>在栈顶创建一个record结构，用来保存协程信息，比如栈地址、栈大小、栈分配器、用户函数等</li>
+<li>使用make_fcontext在新的栈顶上（record的上面）伪造一个栈帧，将context_entry函数地址作为返回地址保存在栈帧中（实际的实现会更复杂一些）<br><img src="/2024/05/23/ceph_spawn/3.png"></li>
+<li>使用jump_fcontext跳转到伪造的栈帧上，并将record地址作为消息传递过去</li>
+<li>jump_fcontext函数退栈，访问到返回地址时，变成对context_entry函数的调用（这里利用到了jump_fcontext时保存到DI寄存器上的源栈顶地址，作为函数的第一参数，第二参数则继承于jump_fcontext的第二参数vp），而不是返回到上一级（实际上也不存在上一级）</li>
+<li>进入context_entry函数后，先从参数取得record地址缓存到栈上，再通过jump_fcontext跳转回create_context1的上下文，这样两边的跳转通道都建立好了</li>
+<li>create_context1函数返回最新的目标上下文地址，也就是context_entry函数的栈顶地址</li>
+</ol>
+<h1 id="context-entry"><a href="#context-entry" class="headerlink" title="context_entry"></a>context_entry</h1><p>context_entry类似于协程的main函数，下面是它的定义：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename Rec &gt;</span><br><span class="line">void context_entry( transfer_t t) noexcept &#123;</span><br><span class="line">    // transfer control structure to the context-stack</span><br><span class="line">    Rec * rec = static_cast&lt; Rec * &gt;( t.data);</span><br><span class="line">    BOOST_ASSERT( nullptr != t.fctx);</span><br><span class="line">    BOOST_ASSERT( nullptr != rec);</span><br><span class="line">    try &#123;</span><br><span class="line">        // jump back to `create_context()`</span><br><span class="line">        t = jump_fcontext( t.fctx, nullptr);</span><br><span class="line">        // start executing</span><br><span class="line">        t.fctx = rec-&gt;run( t.fctx);</span><br><span class="line">    &#125; catch ( forced_unwind const&amp; ex) &#123;</span><br><span class="line">        t = &#123; ex.fctx, nullptr &#125;;</span><br><span class="line">#ifndef BOOST_ASSERT_IS_VOID</span><br><span class="line">        const_cast&lt; forced_unwind &amp; &gt;( ex).caught = true;</span><br><span class="line">#endif</span><br><span class="line">    &#125;</span><br><span class="line">    BOOST_ASSERT( nullptr != t.fctx);</span><br><span class="line">    // destroy context-stack of `this`context on next context</span><br><span class="line">    ontop_fcontext( t.fctx, rec, context_exit&lt; Rec &gt;);</span><br><span class="line">    BOOST_ASSERT_MSG( false, &quot;context already terminated&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中t.data就对应之前提到的record地址，t.fctx则是调用者的栈顶地址。<br>context_entry在运行record::run前使用jump_fcontext返回了原本的上下文，告知调用者进入协程的通道已准备就绪，下次通过jump_fcontext进入就无需携带任何消息了。<br>record::run函数的实现很简单，就只是将调用者的栈顶地址封装成一个continuation，作为参数传递给业务函数fn_并运行，业务函数需要切出上下文时就会用到这个continuation。这里的fn_实际上就对应spawn_helper处的lambda函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">fcontext_t record::run( fcontext_t fctx) &#123;</span><br><span class="line">  continuation c&#123; fctx &#125;;</span><br><span class="line">  // invoke context-function</span><br><span class="line">  c = std::invoke( fn_, std::move( c) )</span><br><span class="line">  return std::exchange( c.fctx_, nullptr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>context_entry用try catch 包围了record::run函数，用于捕获forced_unwind类型的异常，context_entry会从该异常中取出新的调用者栈顶地址，而不是从record::run函数的返回值获取。这在需要提前终止协程的情况下很有用。<br>在流程的最后（无论是record::run正常返回，还是捕获到异常提前退出），通过ontop_fcontext函数返回调用者上下文，并触发context_exit函数清理协程栈。</p>
+<h1 id="ontop-fcontext"><a href="#ontop-fcontext" class="headerlink" title="ontop_fcontext"></a>ontop_fcontext</h1><p>ontop_fcontext函数的声明如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">transfer_t ontop_fcontext( fcontext_t const to, void * vp, transfer_t (* fn)( transfer_t) );</span><br></pre></td></tr></table></figure>
+<p>ontop_fcontext函数也是一个用汇编代码实现的函数，它的效果和 jump_fcontext类似，都会切换到目标上下文，但是jump_fcontext在最后是从栈上取出返回地址跳转，而ontop_fcontext则是使用第三个参数（函数指针）作为跳转地址，前两个参数作为函数传参，待目标函数执行完成后，才从当前栈上取出地址返回，相当于ontop_fcontext不光完成了上下文切换，还在切换后多执行了一个函数，这个函数的返回值限定为fcontext_t，必须和jump_fcontext 保持一致，这样才能顺利衔接。</p>
+<h1 id="协程的销毁"><a href="#协程的销毁" class="headerlink" title="协程的销毁"></a>协程的销毁</h1><p>销毁协程采用context_exit函数，它调用给定的record实例的deallocate来完成工作，最后通过返回空地址来告诉调用者协程运行完毕。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename Rec &gt;</span><br><span class="line">transfer_t context_exit( transfer_t t) noexcept &#123;</span><br><span class="line">    Rec * rec = static_cast&lt; Rec * &gt;( t.data);</span><br><span class="line">    // destroy context stack</span><br><span class="line">    rec-&gt;deallocate();</span><br><span class="line">    return &#123; nullptr, nullptr &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>record::deallocate函数通过调用静态方法destroy，对record结构体进行析构，并调用栈分配器的方法摧毁整个协程栈。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void record::deallocate() noexcept &#123;</span><br><span class="line">  destroy( this);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">static void destroy( record * p) noexcept &#123;</span><br><span class="line">  typename std::decay&lt; StackAlloc &gt;::type salloc = std::move( p-&gt;salloc_);</span><br><span class="line">  stack_context sctx = p-&gt;sctx_;</span><br><span class="line">  // deallocate record</span><br><span class="line">  p-&gt;~record();</span><br><span class="line">  // destroy stack with stack allocator</span><br><span class="line">  salloc.deallocate( sctx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，协程的创建、切入、切出、销毁可以用下面一幅图来描述：<br><img src="/2024/05/23/ceph_spawn/4.png"></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2024/05/23/ceph_spawn/" data-id="clwubsfyt000135eq2xzxae4k" data-title="ceph spawn" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2024/05/18/references/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">好文推荐</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/18/references/">好文推荐</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/13/sst/">rocksdb SST格式</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2024 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>rocksdb SST格式 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="SST文件格式一个SST文件的格式如下：可以观察到一个SST文件内部划分成多种类型的块：  data block 用来保存一定数量的用户键值对。当data block达到一定尺寸后，就需要生成下一个data block容纳更多的键值对。 filter block 使用布隆过滤器来加快判断目标key是否位于当前SST文件中 index block 记录每个data block的位置和key范围，用于">
+<meta property="og:type" content="article">
+<meta property="og:title" content="rocksdb SST格式">
+<meta property="og:url" content="http://example.com/2024/05/13/sst/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="SST文件格式一个SST文件的格式如下：可以观察到一个SST文件内部划分成多种类型的块：  data block 用来保存一定数量的用户键值对。当data block达到一定尺寸后，就需要生成下一个data block容纳更多的键值对。 filter block 使用布隆过滤器来加快判断目标key是否位于当前SST文件中 index block 记录每个data block的位置和key范围，用于">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/05/13/sst/1.png">
+<meta property="article:published_time" content="2024-05-13T16:07:05.286Z">
+<meta property="article:modified_time" content="2024-05-13T23:33:41.143Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/05/13/sst/1.png">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-sst" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2024/05/13/sst/" class="article-date">
+  <time class="dt-published" datetime="2024-05-13T16:07:05.286Z" itemprop="datePublished">2024-05-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      rocksdb SST格式
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="SST文件格式"><a href="#SST文件格式" class="headerlink" title="SST文件格式"></a>SST文件格式</h1><p>一个SST文件的格式如下：<br><img src="/2024/05/13/sst/1.png"><br>可以观察到一个SST文件内部划分成多种类型的块：</p>
+<ol>
+<li>data block 用来保存一定数量的用户键值对。当data block达到一定尺寸后，就需要生成下一个data block容纳更多的键值对。</li>
+<li>filter block 使用布隆过滤器来加快判断目标key是否位于当前SST文件中</li>
+<li>index block 记录每个data block的位置和key范围，用于筛选出目标key所在的data block</li>
+<li>stats block 用来记录SST文件的一些基本信息，如所有data block的总大小、index block的大小、fiter block的大小、键值对数量、data block数量等。</li>
+<li>mataindex block 记录每个meta block的位置和大小</li>
+<li>footer用于记录mataindex block 和 index block 的位置和大小，还包括一个魔法数。</li>
+</ol>
+<p>SST编码格式的一个特征在于它总是将索引信息放在文件的尾部，因为它的索引信息是在数据编码的过程中逐渐完善的，把索引信息放在最后更加方便，并且也能用于检查完整性。也因为如此，解码时需要从尾部开始反向进行。</p>
+<h1 id="Data-Block"><a href="#Data-Block" class="headerlink" title="Data Block"></a>Data Block</h1><p>在data block内部，每个用户键值对的编码格式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">shared_bytes: varint32</span><br><span class="line">unshared_bytes: varint32</span><br><span class="line">value_length: varint32</span><br><span class="line">key_delta: char[unshared_bytes]</span><br><span class="line">value: char[value_length]</span><br></pre></td></tr></table></figure>
+<p>其中shared_bytes表示key的共享前缀长度，unshared_bytes表示key的后缀长度，value_length表示值长度，key_delta保存了key的后缀部分，value保存了值内容。<br>data block并不会为每个键值对都记录完整的key，只有第一个键值对会保存完整的key，后续的键值对只需记录与前一个key不同的后缀部分以及相同的前缀长度，以节省存储空间。<br>前缀压缩存储的缺点在于只支持顺序查找，为了能兼顾空间和效率，这里采用一个折中方案，每隔n个键值对作为前缀压缩的一个分组，每个分组的第一个键值对放弃前缀压缩（shared_bytes &#x3D;&#x3D; 0），只对该分组后续的键值对采用前缀压缩。<br>每个分组的首地址记为一个restart_point，可以作为二分查找的落点。当需要在data block内搜索一个key时，可以先跳转到中间的restart_point处，顺序检查当前分组是否存在目标key；如果不存在目标key，则根据大小关系，选择跳转到前面的restart_point或者后面的restart_point继续搜索。</p>
+<p>为了进一步加速查找，还可以增加一个hash表（buckets数组），建立key –&gt; hash –&gt; restart_point的映射关系，省去二分查找的过程。<br>hash表的使用方法为，先根据目标key计算一个hash值，再使用hash值对hash表尺寸取模（hash % num_buckets），得到bucket_id，从buckets[bucket_id]处取得重启点位置。<br>考虑到这种hash映射可能是不均匀的，对于没有分配到重启点的bucket，记为kNoEntry状态(255)；对于多个重启点映射的bucket，记为kCollision状态(254)；这两种状态的bucket都不可用，如果key命中了这样的bucket，则退化为二分查找。</p>
+<p>hash表和重启点数组都放在data block的尾部保存，其编码格式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">restarts: varint32[num_restarts]</span><br><span class="line">buckets:  varint8[num_buckets]</span><br><span class="line">num_buckets: varint16</span><br><span class="line">block_footer: varint32 // index_type &lt;&lt; 31 | num_restarts</span><br></pre></td></tr></table></figure>
+<p>最后一项block_footer使用低31位记录重启点数量，使用最高位记录是否启用hash表（index_type），为0时表示不启用，为1时表示启用。不启用hash表时，buckets和num_buckets字段会省去。</p>
+<p>hash表有一些生成限制，比如：</p>
+<ol>
+<li>加入hash表后，data block的大小不能超过64KB</li>
+<li>重启点的序号不能超过253（254和255是保留值）</li>
+</ol>
+<p>如果不能满足条件，则会放弃生成hash表</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2024/05/13/sst/" data-id="clw7mke5a00023deq930h0n54" data-title="rocksdb SST格式" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2024/05/18/references/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          好文推荐
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2024/05/08/cephfs_mdcache/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">cephfs元数据缓存</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/18/references/">好文推荐</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/13/sst/">rocksdb SST格式</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2024 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

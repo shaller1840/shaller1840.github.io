@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>samba | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="QA（1）为什么我使用本地用户认证无法挂载cifs共享目录？答：检查一下samba服务端能否ping通自己的节点名，如果不行，在&#x2F;etc&#x2F;hosts文件中把节点名加到127.0.0.1后面，再试试看能否挂载cifs共享目录。这个问题的发生可能和ntlm认证有关 （2）我的samba配置了AD域用户组认证，但是使用这个用户组内的用户登录时却失败了，这是为什么？答：原因在于smb.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="samba">
+<meta property="og:url" content="http://example.com/2024/04/23/samba/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="QA（1）为什么我使用本地用户认证无法挂载cifs共享目录？答：检查一下samba服务端能否ping通自己的节点名，如果不行，在&#x2F;etc&#x2F;hosts文件中把节点名加到127.0.0.1后面，再试试看能否挂载cifs共享目录。这个问题的发生可能和ntlm认证有关 （2）我的samba配置了AD域用户组认证，但是使用这个用户组内的用户登录时却失败了，这是为什么？答：原因在于smb.">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/1.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/2.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/3.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/4.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/5.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/6.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/7.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/8.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/9.jpg">
+<meta property="og:image" content="http://example.com/2024/04/23/samba/10.jpg">
+<meta property="article:published_time" content="2024-04-23T13:25:13.000Z">
+<meta property="article:modified_time" content="2024-05-14T00:07:56.342Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/04/23/samba/1.jpg">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-samba" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2024/04/23/samba/" class="article-date">
+  <time class="dt-published" datetime="2024-04-23T13:25:13.000Z" itemprop="datePublished">2024-04-23</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      samba
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="QA"><a href="#QA" class="headerlink" title="QA"></a>QA</h1><p>（1）为什么我使用本地用户认证无法挂载cifs共享目录？<br><img src="/2024/04/23/samba/1.jpg"><br>答：检查一下samba服务端能否ping通自己的节点名，如果不行，在&#x2F;etc&#x2F;hosts文件中把节点名加到127.0.0.1后面，再试试看能否挂载cifs共享目录。这个问题的发生可能和ntlm认证有关</p>
+<p>（2）我的samba配置了AD域用户组认证，但是使用这个用户组内的用户登录时却失败了，这是为什么？<br>答：原因在于smb.conf中如果没有显式地指定用户组所在的AD域，那么samba会自动推导这个用户组所在的AD域，这有可能得到一个错误的结果，导致认证失败。<br>只有以下两种情况能够在AD域用户组前面省略域名，写成”@group_name”的形式：</p>
+<ol>
+<li>smb.conf中”winbind use default domain &#x3D; yes”，并且workgroup和AD域名的简写一致</li>
+<li>netbios name 和 AD域名的简写一致<br>其他情况下需要在AD域用户组前面加上域名，写成”@realm_name&#x2F;group_name”的形式</li>
+</ol>
+<p>以下是AD域用户组组认证代码的调用路径：<br><img src="/2024/04/23/samba/2.jpg"></p>
+<p>在token_contains_name环节，检查到名称的第一个字符是@或&amp;或+，就会把后面的字符串当作组名来对待<br>在lookup_name_smbconf这个环节，它分为以下几个步骤：</p>
+<ol>
+<li>检查组名是否携带AD域名，如果携带AD域名，那么使用给定的AD域名查询组</li>
+<li>如果配置项”winbind use default domain &#x3D; yes”（默认是no），那么使用配置项workgroup作为AD域名查询组</li>
+<li>使用配置项”netbios name”作为AD域名查询组</li>
+<li>使用常量”Unix Group”作为AD域名查询组</li>
+</ol>
+<p>如果上述步骤都未找到匹配的组，那么本次AD域用户组认证失败</p>
+<p>（3） 为什么我的winbind服务在正常运行，但是使用wbinfo -u 查询域用户时却提示“check_winbind_security: wbcAuthenticateUserEx failed: WBC_ERR_WINBIND_NOT_AVAILABLE”？<br>答：用ldd查看一下wbinfo的依赖库路径是否正确，尤其是libwbclient.so，你的环境上有可能存在多个libwbclient.so，而wbinfo引用了错误的libwbclient.so导致未能成功向winbind发送请求</p>
+<p>（4）为什么我在使用“net ads join”添加节点到AD域时，提示“failed to find DC for domain”<br><img src="/2024/04/23/samba/3.jpg"><br>答：&#x2F;etc&#x2F;resolv.conf没有写AD域服务器ip</p>
+<p>（5）为什么我在使用“net ads join”添加节点到AD域时，提示“Cannot contact any KDC for requested realm”<br><img src="/2024/04/23/samba/4.jpg"><br>答：可能是当前节点和AD域服务器之间跨越了太多网段，而kerberos协议默认使用udp传输，很容易丢包引起认证失败<br>解决方案是修改&#x2F;etc&#x2F;krb5.conf：<br>[libdefaults]<br>udp_preference_limit &#x3D; 1<br>参考链接：<br><a target="_blank" rel="noopener" href="https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166">https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166</a></p>
+<p>（6）为什么我试图通过AD域认证登录samba目录时，log.smbd打印如下错误：<br><img src="/2024/04/23/samba/5.jpg"><br>答：可能是winbind服务没有成功启动，检查一下它出了什么问题</p>
+<p>（7）为什么我在使用“net ads join”添加节点到AD域时，提示“An invalid parameter was passed to a service or function”<br><img src="/2024/04/23/samba/6.jpg"><br>答：kerberos认证信息中包含时间校验，因此当前节点和域服务器的时差不能过大，否则会判定为认证失败</p>
+<p>（8）为什么节点加域时提示：None of the information to be translated has been translated<br>答：这个其实是指你根据一个netbios name 去查找对应的rid 时，AD域服务器没有找到这项映射<br><img src="/2024/04/23/samba/7.jpg"><br>从上图可以看到一开始节点试图为自己创建一个账户，但是AD域服务器提示这个用户已存在，然后节点才试图根据名称查找rid<br>这种情况一般是AD域服务器上残留了名称相同的其他账户信息，需要将其清理后，才能使当前节点完成加域流程<br>在Active Directory用户和计算机–&gt;域名–&gt;Computers栏目找到同名记录并删除就行了<br><img src="/2024/04/23/samba/8.jpg"></p>
+<p>（9）为什么我的节点“net ads testjoin”是一开始OK的，后面又提示“Join to domain is not valid: The attempted logon is invalid. This is either due to a bad username or authentication information”<br><img src="/2024/04/23/samba/9.jpg"><br>答：检查一下是不是有其他节点使用了相同的netbios_name，覆写了AD域服务器上的认证信息，导致当前节点的凭据失效<br>为了验证这个猜想，你可以在AD域服务器上删除这个节点，然后使用wireshark抓包，观察一段时间看看是否有其他节点将其重新注册<br><img src="/2024/04/23/samba/10.jpg"></p>
+<p>（10）为什么我在centos 7上尝试用本地用户登录cifs共享目录，却提示”is write-protected, mounting read-only”（samba server配置了AD域认证）<br>答：<br>因为在旧版代码中，cifs client在收到NTLM_NEGITIATE的应答后（”Session Setup Response, Error: STATUS_MORE_PROCESSING_REQUIRED, NTLMSSP_CHALLENGE”）<br>在mount命令未指定domain的情况下，会从报文中提取出服务端的domain信息，自动填充到下一阶段的NTLMSSP_AUTH请求中，<br>这样一来，samba server会认为client试图以一个域用户的身份去登录，自然就无法找到这个用户，而判定没有登录权限，<br>一个简单的解决办法是，在mount options 中随便指定一个不存在的domain来登录（mount -o domain&#x3D;unknown），这样cifs client 就不会自动填充domain，<br>而samba server检查到这个domain无效就会仍按照本地用户去识别，这样就能以本地用户的身份登录成功了<br>在centos 8中这个问题已经由如下commit修复，它通过增加了一个domainauto选项，来默认禁用domain的自动填充功能<br><a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/commit/395664439c4945e4827543e3ca80f7b74e1bf733">Fix default behaviour for empty domains and add domainauto option · torvalds&#x2F;linux@3956644 · GitHub</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2024/04/23/samba/" data-id="clw7mke5700013deq77107iaw" data-title="samba" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2024/04/26/bluestore/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Bluestore存储结构
+        
+      </div>
+    </a>
+  
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/18/references/">好文推荐</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/13/sst/">rocksdb SST格式</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+          </li>
+        
+          <li>
+            <a href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2024 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
