@@ -9,20 +9,20 @@
   <meta name="description" content="简介cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯">
 <meta property="og:type" content="article">
 <meta property="og:title" content="cephfs概述">
-<meta property="og:url" content="http://example.com/index/cephfs/index.html">
+<meta property="og:url" content="http://example.com/files/cephfs/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="简介cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="http://example.com/index/cephfs/2.1.png">
-<meta property="og:image" content="http://example.com/index/cephfs/1.png">
-<meta property="og:image" content="http://example.com/index/cephfs/2.png">
-<meta property="og:image" content="http://example.com/index/cephfs/3.png">
-<meta property="og:image" content="http://example.com/index/cephfs/22.png">
+<meta property="og:image" content="http://example.com/files/cephfs/2.1.png">
+<meta property="og:image" content="http://example.com/files/cephfs/1.png">
+<meta property="og:image" content="http://example.com/files/cephfs/2.png">
+<meta property="og:image" content="http://example.com/files/cephfs/3.png">
+<meta property="og:image" content="http://example.com/files/cephfs/22.png">
 <meta property="article:published_time" content="2024-05-06T12:39:16.472Z">
 <meta property="article:modified_time" content="2024-05-18T09:58:57.903Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://example.com/index/cephfs/2.1.png">
+<meta name="twitter:image" content="http://example.com/files/cephfs/2.1.png">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
@@ -77,9 +77,9 @@
 </header>
 
       <div class="outer">
-        <section id="main"><article id="post-index/cephfs" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+        <section id="main"><article id="post-files/cephfs" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/index/cephfs/" class="article-date">
+    <a href="/files/cephfs/" class="article-date">
   <time class="dt-published" datetime="2024-05-06T12:39:16.472Z" itemprop="datePublished">2024-05-06</time>
 </a>
     
@@ -99,13 +99,13 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。<br>创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯粹的文件内容。<br>client要针对元数据进行修改时（如create、unlink、rename、setattr等），需要发送请求给mds代为修改，不能直接操作元数据池。<br>client能直接读写数据池，但是也需要从mds得到授权后才能进行。<br>另一方面，mds是能够读写数据池的，比如将文件的backtrace保存在数据池中，或者扫描数据池对象来找回文件大小。<br><img src="/index/cephfs/2.1.png"></p>
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。<br>创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯粹的文件内容。<br>client要针对元数据进行修改时（如create、unlink、rename、setattr等），需要发送请求给mds代为修改，不能直接操作元数据池。<br>client能直接读写数据池，但是也需要从mds得到授权后才能进行。<br>另一方面，mds是能够读写数据池的，比如将文件的backtrace保存在数据池中，或者扫描数据池对象来找回文件大小。<br><img src="/files/cephfs/2.1.png"></p>
 <h1 id="Rank"><a href="#Rank" class="headerlink" title="Rank"></a>Rank</h1><p>一个文件系统中可以配置多个mds，但并非每个mds都会参与到工作中，文件系统中的rank数决定了会有多少个mds参与工作。一个rank就是一个工位，一个mds就对应一个工人。初始情况下，文件系统中只有一个rank，当用户配置了多个mds时，只会有一个mds被mon选拔为工作者，其余的mds都处于闲置状态（standby），等待故障接管。rank数的修改，是通过调整文件系统的max_mds参数实现的。</p>
 <p>当文件系统现有的rank数少于max_mds时，如果存在standby mds，则mon会为其新增rank，让这些standby mds进行接管，新增的rank数取决于当前的standby mds有多少，可能会出现“新增rank后总的rank数还是少于max_mds”的情况；如果不存在standby mds，则rank数不会改变。当文件系统的rank数多于max_mds时，则mon会从最后一个rank开始（id最大），命令相应的mds将缓存的元数据迁移到前面的mds上，然后移除这个rank，并将该mds变回standby状态。</p>
 <p>从可用状态来看，rank具有三种类型：up，failed，damaged。up是指那些已被mds接管，能够正常运作的rank；failed是指那些还没有被mds接管，无法运作的rank；damaged是指那些因为元数据异常，而禁止接管的rank。failed和damaged状态的不同之处在于，当存在standby mds时，failed rank能够被接管变为up rank，但是damaged rank则不行，只能在人工修复错误后，通过“ceph mds repaired <rank>”指令来解除该状态。</rank></p>
 <p>从是否启用的角度来看，rank具有两种类型：in和stopped。in rank表示那些被文件系统启用，分配了工作职责的rank；stopped rank表示那些已被停用，不再参与文件系统工作的rank。前面提及的文件系统的rank数，准确地来说应是in rank的数量；被停用的rank不会被删除，而是标记为stopped，等待随时启用。由于每次创建新的rank时，都需要将一些与rank相关的信息写入元数据池，采用改为启用&#x2F;停用的方式，能够免去重新创建这些信息，有助于更快地调整可用rank的数量。</p>
-<h1 id="文件布局（file-layout）"><a href="#文件布局（file-layout）" class="headerlink" title="文件布局（file_layout）"></a>文件布局（file_layout）</h1><p>文件布局描述的是如何将一段文件内容拆分成多个对象进行存储。在上层应用看来，它们读写的都是一段连续的文件内容。但是实际上，写文件时会将内容拆分存储到多个对象上，读文件时会将对象内容拼凑起来再反馈给上层。<br><img src="/index/cephfs/1.png"><br>文件布局的几个重要属性如下：<br>1.stripe_unit：一个条带单元的长度<br>2.stripe_count：一个条带中的单元数<br>3.object_size：一个对象的长度<br>写文件前，先准备stripe_count个对象，每个对象的大小为object_size，然后将对象划分为多个stripe_unit；写文件时，先写满第一个对象的一个条带单元后，再继续写下一个对象的一个条带单元，直至写满一个条带；接着又回到第一个对象上，开始写它的第二个条带单元，其他对象也是同理，写对等位置上的条带单元。当一组对象都写满后，再换下一组对象继续写。读文件的过程不再累述，就是把一组对象读出来，按照相同的规则拼凑读取即可。</p>
-<p>下图中，一个方格就是一个条带单元，一行方格就是一个条带，从名字可以看出条带单元所属的共同对象。<br><img src="/index/cephfs/2.png"><br>默认的文件布局为：stripe_count &#x3D;&#x3D; 1，stripe_unit &#x3D;&#x3D; object_size。此时相当于不对内容进行条带化，而是直接顺序存储到对象上。<br><img src="/index/cephfs/3.png"><br>不同的文件可以采用不同的布局。</p>
+<h1 id="文件布局（file-layout）"><a href="#文件布局（file-layout）" class="headerlink" title="文件布局（file_layout）"></a>文件布局（file_layout）</h1><p>文件布局描述的是如何将一段文件内容拆分成多个对象进行存储。在上层应用看来，它们读写的都是一段连续的文件内容。但是实际上，写文件时会将内容拆分存储到多个对象上，读文件时会将对象内容拼凑起来再反馈给上层。<br><img src="/files/cephfs/1.png"><br>文件布局的几个重要属性如下：<br>1.stripe_unit：一个条带单元的长度<br>2.stripe_count：一个条带中的单元数<br>3.object_size：一个对象的长度<br>写文件前，先准备stripe_count个对象，每个对象的大小为object_size，然后将对象划分为多个stripe_unit；写文件时，先写满第一个对象的一个条带单元后，再继续写下一个对象的一个条带单元，直至写满一个条带；接着又回到第一个对象上，开始写它的第二个条带单元，其他对象也是同理，写对等位置上的条带单元。当一组对象都写满后，再换下一组对象继续写。读文件的过程不再累述，就是把一组对象读出来，按照相同的规则拼凑读取即可。</p>
+<p>下图中，一个方格就是一个条带单元，一行方格就是一个条带，从名字可以看出条带单元所属的共同对象。<br><img src="/files/cephfs/2.png"><br>默认的文件布局为：stripe_count &#x3D;&#x3D; 1，stripe_unit &#x3D;&#x3D; object_size。此时相当于不对内容进行条带化，而是直接顺序存储到对象上。<br><img src="/files/cephfs/3.png"><br>不同的文件可以采用不同的布局。</p>
 <h1 id="存储格式"><a href="#存储格式" class="headerlink" title="存储格式"></a>存储格式</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/07/cephfs_object/">存储格式</a></p>
 <h1 id="元数据日志"><a href="#元数据日志" class="headerlink" title="元数据日志"></a>元数据日志</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/06/mdlog/">元数据日志</a></p>
 <h1 id="元数据缓存"><a href="#元数据缓存" class="headerlink" title="元数据缓存"></a>元数据缓存</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/08/cephfs_mdcache/">元数据缓存</a></p>
@@ -120,12 +120,12 @@
 <li>excl状态：这个状态下，目标元数据被特定client独占，只有这个client能够操作目标元数据，其他client和mds（包括主mds）都无法操作。以往client需要修改元数据时，需要先向主mds请求，得到应答后再作用于本地，现在有了特权后，可以直接先在本地修改，把流程走下去，最后再将所有改动合并成一个请求发送给mds进行更新，极大地提升了效率。</li>
 </ol>
 <p>上述状态的划分只是一个粗略的表述，在不同类型的锁上这些状态的表现效果会略有差异。</p>
-<p>cephfs的分布式锁流程十分复杂，这里只能提供一个粗略的示意图：<br><img src="/index/cephfs/22.png"></p>
+<p>cephfs的分布式锁流程十分复杂，这里只能提供一个粗略的示意图：<br><img src="/files/cephfs/22.png"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/index/cephfs/" data-id="clxt3zg570002greq8nax6vho" data-title="cephfs概述" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/cephfs/" data-id="clxt41e960004mqeqf9fmbnni" data-title="cephfs概述" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -135,7 +135,7 @@
     
 <nav id="article-nav">
   
-    <a href="/index/mdlog/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/files/mdlog/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
@@ -189,19 +189,19 @@
           </li>
         
           <li>
-            <a href="/index/ceph_spawn/">ceph spawn</a>
+            <a href="/files/ceph_spawn/">ceph spawn</a>
           </li>
         
           <li>
-            <a href="/index/references/">好文推荐</a>
+            <a href="/files/references/">好文推荐</a>
           </li>
         
           <li>
-            <a href="/index/sst/">rocksdb SST格式</a>
+            <a href="/files/sst/">rocksdb SST格式</a>
           </li>
         
           <li>
-            <a href="/index/cephfs_mdcache/">cephfs元数据缓存</a>
+            <a href="/files/cephfs_mdcache/">cephfs元数据缓存</a>
           </li>
         
       </ul>
