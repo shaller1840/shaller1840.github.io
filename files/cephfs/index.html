@@ -19,7 +19,7 @@
 <meta property="og:image" content="http://example.com/files/cephfs/3.png">
 <meta property="og:image" content="http://example.com/files/cephfs/22.png">
 <meta property="article:published_time" content="2024-05-06T12:39:16.472Z">
-<meta property="article:modified_time" content="2024-05-18T09:58:57.903Z">
+<meta property="article:modified_time" content="2024-06-24T15:14:56.870Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/files/cephfs/2.1.png">
@@ -106,9 +106,9 @@
 <p>从是否启用的角度来看，rank具有两种类型：in和stopped。in rank表示那些被文件系统启用，分配了工作职责的rank；stopped rank表示那些已被停用，不再参与文件系统工作的rank。前面提及的文件系统的rank数，准确地来说应是in rank的数量；被停用的rank不会被删除，而是标记为stopped，等待随时启用。由于每次创建新的rank时，都需要将一些与rank相关的信息写入元数据池，采用改为启用&#x2F;停用的方式，能够免去重新创建这些信息，有助于更快地调整可用rank的数量。</p>
 <h1 id="文件布局（file-layout）"><a href="#文件布局（file-layout）" class="headerlink" title="文件布局（file_layout）"></a>文件布局（file_layout）</h1><p>文件布局描述的是如何将一段文件内容拆分成多个对象进行存储。在上层应用看来，它们读写的都是一段连续的文件内容。但是实际上，写文件时会将内容拆分存储到多个对象上，读文件时会将对象内容拼凑起来再反馈给上层。<br><img src="/files/cephfs/1.png"><br>文件布局的几个重要属性如下：<br>1.stripe_unit：一个条带单元的长度<br>2.stripe_count：一个条带中的单元数<br>3.object_size：一个对象的长度<br>写文件前，先准备stripe_count个对象，每个对象的大小为object_size，然后将对象划分为多个stripe_unit；写文件时，先写满第一个对象的一个条带单元后，再继续写下一个对象的一个条带单元，直至写满一个条带；接着又回到第一个对象上，开始写它的第二个条带单元，其他对象也是同理，写对等位置上的条带单元。当一组对象都写满后，再换下一组对象继续写。读文件的过程不再累述，就是把一组对象读出来，按照相同的规则拼凑读取即可。</p>
 <p>下图中，一个方格就是一个条带单元，一行方格就是一个条带，从名字可以看出条带单元所属的共同对象。<br><img src="/files/cephfs/2.png"><br>默认的文件布局为：stripe_count &#x3D;&#x3D; 1，stripe_unit &#x3D;&#x3D; object_size。此时相当于不对内容进行条带化，而是直接顺序存储到对象上。<br><img src="/files/cephfs/3.png"><br>不同的文件可以采用不同的布局。</p>
-<h1 id="存储格式"><a href="#存储格式" class="headerlink" title="存储格式"></a>存储格式</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/07/cephfs_object/">存储格式</a></p>
-<h1 id="元数据日志"><a href="#元数据日志" class="headerlink" title="元数据日志"></a>元数据日志</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/06/mdlog/">元数据日志</a></p>
-<h1 id="元数据缓存"><a href="#元数据缓存" class="headerlink" title="元数据缓存"></a>元数据缓存</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/08/cephfs_mdcache/">元数据缓存</a></p>
+<h1 id="存储格式"><a href="#存储格式" class="headerlink" title="存储格式"></a>存储格式</h1><p><a href="../files/cephfs_object/">存储格式</a></p>
+<h1 id="元数据日志"><a href="#元数据日志" class="headerlink" title="元数据日志"></a>元数据日志</h1><p><a href="../files/mdlog/">元数据日志</a></p>
+<h1 id="元数据缓存"><a href="#元数据缓存" class="headerlink" title="元数据缓存"></a>元数据缓存</h1><p><a href="../files/cephfs_mdcache/">元数据缓存</a></p>
 <h1 id="加锁流程"><a href="#加锁流程" class="headerlink" title="加锁流程"></a>加锁流程</h1><p>为了确保多个client以及多个mds之间的缓存强一致性，cephfs使用分布式锁来控制当前缓存中的元数据的可操作状态。</p>
 <p>不同的元数据都有着各自的分布式锁，分布式锁并不对客户端展示，客户端只能看到元数据当前的授权状态。但是客户端发起的元数据请求，会驱动分布式锁状态变化，这些状态变化又会导致不同进程上的授权变更，从而保证不同进程有序地读写相同元数据，避免分歧。</p>
 <p>锁状态可以分为稳定状态和过渡状态。仅当锁处于稳定状态后，才能开始处理相应的元数据请求；每两个稳定状态之间都有着特定的过渡状态，需要进行状态迁移时，先转变为过渡状态（避免饥饿现象），确保切换条件满足后，才进入目标态。</p>
