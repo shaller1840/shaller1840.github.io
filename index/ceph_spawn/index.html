@@ -9,19 +9,19 @@
   <meta name="description" content="概述从ceph P版本开始，引入了一个spawn组件，用来实现协程相关的功能。这个组件实际上是复制于boost::asio，而boost打算在未来抛弃spawn这部分代码，换成其他实现形式，因此ceph不得不把这部分代码备份到自己的项目中。 spawnspawn方法用于将一个用户自定义函数封装成一个协程来运行 12345678910template &lt;typename Function, t">
 <meta property="og:type" content="article">
 <meta property="og:title" content="ceph spawn">
-<meta property="og:url" content="http://example.com/files/ceph_spawn/index.html">
+<meta property="og:url" content="http://example.com/index/ceph_spawn/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="概述从ceph P版本开始，引入了一个spawn组件，用来实现协程相关的功能。这个组件实际上是复制于boost::asio，而boost打算在未来抛弃spawn这部分代码，换成其他实现形式，因此ceph不得不把这部分代码备份到自己的项目中。 spawnspawn方法用于将一个用户自定义函数封装成一个协程来运行 12345678910template &lt;typename Function, t">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="http://example.com/files/ceph_spawn/jump_fcontext.png">
-<meta property="og:image" content="http://example.com/files/ceph_spawn/jump_fcontext2.png">
-<meta property="og:image" content="http://example.com/files/ceph_spawn/3.png">
-<meta property="og:image" content="http://example.com/files/ceph_spawn/4.png">
+<meta property="og:image" content="http://example.com/index/ceph_spawn/jump_fcontext.png">
+<meta property="og:image" content="http://example.com/index/ceph_spawn/jump_fcontext2.png">
+<meta property="og:image" content="http://example.com/index/ceph_spawn/3.png">
+<meta property="og:image" content="http://example.com/index/ceph_spawn/4.png">
 <meta property="article:published_time" content="2024-05-24T01:34:13.295Z">
 <meta property="article:modified_time" content="2024-05-27T16:37:22.314Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://example.com/files/ceph_spawn/jump_fcontext.png">
+<meta name="twitter:image" content="http://example.com/index/ceph_spawn/jump_fcontext.png">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
@@ -76,9 +76,9 @@
 </header>
 
       <div class="outer">
-        <section id="main"><article id="post-files/ceph_spawn" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+        <section id="main"><article id="post-index/ceph_spawn" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/files/ceph_spawn/" class="article-date">
+    <a href="/index/ceph_spawn/" class="article-date">
   <time class="dt-published" datetime="2024-05-24T01:34:13.295Z" itemprop="datePublished">2024-05-23</time>
 </a>
     
@@ -158,8 +158,8 @@
 </ol>
 <p>这个函数的效果可以分2个视角来看待：</p>
 <ol>
-<li>线程的视角：jump_fcontext将当前线程的栈切换为参数to给定的栈，运行地址也切换为新的，它把原来的栈顶地址和参数vp通过返回值的形式传输到新的上下文，这样就实现了2个上下文间的消息传递，并且新的上下文拥有源栈顶地址可以随时跳转回去。<br><img src="/files/ceph_spawn/jump_fcontext.png"></li>
-<li>函数的视角：jump_fcontext似乎和普通的函数没什么区别，它可以用于唤醒参数to代表的目标上下文继续运行，并将参数vp作为消息发送过去，然后当前流程会一直阻塞在jump_fcontext这里，直至收到消息被唤醒，此时jump_fcontext会返回发送方的上下文地址fctx以及消息data。<br><img src="/files/ceph_spawn/jump_fcontext2.png"></li>
+<li>线程的视角：jump_fcontext将当前线程的栈切换为参数to给定的栈，运行地址也切换为新的，它把原来的栈顶地址和参数vp通过返回值的形式传输到新的上下文，这样就实现了2个上下文间的消息传递，并且新的上下文拥有源栈顶地址可以随时跳转回去。<br><img src="/index/ceph_spawn/jump_fcontext.png"></li>
+<li>函数的视角：jump_fcontext似乎和普通的函数没什么区别，它可以用于唤醒参数to代表的目标上下文继续运行，并将参数vp作为消息发送过去，然后当前流程会一直阻塞在jump_fcontext这里，直至收到消息被唤醒，此时jump_fcontext会返回发送方的上下文地址fctx以及消息data。<br><img src="/index/ceph_spawn/jump_fcontext2.png"></li>
 </ol>
 <h1 id="callcc"><a href="#callcc" class="headerlink" title="callcc"></a>callcc</h1><p>boost::context::callcc 用于将给定的函数封装到协程中。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename StackAlloc, typename Fn &gt;</span><br><span class="line">continuation</span><br><span class="line">callcc( std::allocator_arg_t, StackAlloc &amp;&amp; salloc, Fn &amp;&amp; fn) &#123;</span><br><span class="line">    using Record = detail::record&lt; continuation, StackAlloc, Fn &gt;;</span><br><span class="line">    return continuation&#123;</span><br><span class="line">                detail::create_context1&lt; Record &gt;(</span><br><span class="line">                        std::forward&lt; StackAlloc &gt;( salloc), std::forward&lt; Fn &gt;( fn) ) &#125;.resume();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -176,7 +176,7 @@
 <ol>
 <li>使用参数StackAlloc分配了一块内存，使用内存的尾部作为栈顶（栈向低地址延伸）</li>
 <li>在栈顶创建一个record结构，用来保存协程信息，比如栈地址、栈大小、栈分配器、用户函数等</li>
-<li>使用make_fcontext在新的栈顶上（record的上面）伪造一个栈帧，将context_entry函数地址作为返回地址保存在栈帧中（实际的实现会更复杂一些）<br><img src="/files/ceph_spawn/3.png"></li>
+<li>使用make_fcontext在新的栈顶上（record的上面）伪造一个栈帧，将context_entry函数地址作为返回地址保存在栈帧中（实际的实现会更复杂一些）<br><img src="/index/ceph_spawn/3.png"></li>
 <li>使用jump_fcontext跳转到伪造的栈帧上，并将record地址作为消息传递过去</li>
 <li>jump_fcontext函数退栈，访问到返回地址时，变成对context_entry函数的调用（这里利用到了jump_fcontext时保存到DI寄存器上的源栈顶地址，作为函数的第一参数，第二参数则继承于jump_fcontext的第二参数vp），而不是返回到上一级（实际上也不存在上一级）</li>
 <li>进入context_entry函数后，先从参数取得record地址缓存到栈上，再通过jump_fcontext跳转回create_context1的上下文，这样两边的跳转通道都建立好了</li>
@@ -195,12 +195,12 @@
 <p>record::deallocate函数通过调用静态方法destroy，对record结构体进行析构，并调用栈分配器的方法摧毁整个协程栈。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void record::deallocate() noexcept &#123;</span><br><span class="line">  destroy( this);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">static void destroy( record * p) noexcept &#123;</span><br><span class="line">  typename std::decay&lt; StackAlloc &gt;::type salloc = std::move( p-&gt;salloc_);</span><br><span class="line">  stack_context sctx = p-&gt;sctx_;</span><br><span class="line">  // deallocate record</span><br><span class="line">  p-&gt;~record();</span><br><span class="line">  // destroy stack with stack allocator</span><br><span class="line">  salloc.deallocate( sctx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，协程的创建、切入、切出、销毁可以用下面一幅图来描述：<br><img src="/files/ceph_spawn/4.png"></p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，协程的创建、切入、切出、销毁可以用下面一幅图来描述：<br><img src="/index/ceph_spawn/4.png"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/files/ceph_spawn/" data-id="clxt3pgzj00039ieqcfdob8q4" data-title="ceph spawn" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/index/ceph_spawn/" data-id="clxt3zg550001greq8658hmgm" data-title="ceph spawn" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -220,7 +220,7 @@
     </a>
   
   
-    <a href="/files/references/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/index/references/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
       <div class="article-nav-title">好文推荐</div>
     </a>
@@ -264,19 +264,19 @@
           </li>
         
           <li>
-            <a href="/files/ceph_spawn/">ceph spawn</a>
+            <a href="/index/ceph_spawn/">ceph spawn</a>
           </li>
         
           <li>
-            <a href="/files/references/">好文推荐</a>
+            <a href="/index/references/">好文推荐</a>
           </li>
         
           <li>
-            <a href="/files/sst/">rocksdb SST格式</a>
+            <a href="/index/sst/">rocksdb SST格式</a>
           </li>
         
           <li>
-            <a href="/files/cephfs_mdcache/">cephfs元数据缓存</a>
+            <a href="/index/cephfs_mdcache/">cephfs元数据缓存</a>
           </li>
         
       </ul>

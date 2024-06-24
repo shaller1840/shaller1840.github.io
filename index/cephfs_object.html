@@ -1,0 +1,20 @@
+<hr>
+<h2 id="title-cephfs存储格式"><a href="#title-cephfs存储格式" class="headerlink" title="title: cephfs存储格式"></a>title: cephfs存储格式</h2><h1 id="dirfrag对象"><a href="#dirfrag对象" class="headerlink" title="dirfrag对象"></a>dirfrag对象</h1><p>cephfs的目录支持分片特性，即将一个目录的内容拆分成多个分片保存，每个分片称为一个dirfrag;<br>一个dirfrag对应一段哈希区间，这里取哈希区间的首地址作为dirfrag的哈希值；<br>dirfrag对象，以目录inode的id为前缀，dirfrag的哈希值为后缀命名，中间以”.”号分隔；<br>如果dirfrag属于id&#x3D;&#x3D;1003的inode，它的哈希值为0x8000，那么这个dirfrag的对象名为1003.8000;<br>cephfs将一个dirfrag作为一个对象保存在元数据池中，mds通过读取这些对象可以在缓存中构造出一棵目录树；<br>dirfrag的基本属性，如文件数、子目录数等，会保存在对象的omap_header中；<br>dirfrag包含的每一个dentry，都会作为一条omap entry保存在对象中，存储格式如下：<br><img src="/cephfs_object/8.png"></p>
+<p>在不考虑快照的情况下，snap_first默认为2，snap_last默认为“head”<br>cephfs支持硬链接，即多个dentry指向相同的inode，因此对于主链接和副链接而言，它们的dentry_value形式有所不同<br>对于主链接的情况，dentry_value &#x3D; dentry_type + inode，这里就是inode结构体的常规保存位置；<br>对于副链接的情况，dentry_value &#x3D; dentry_type + inode_id + inode_type，只提供查找inode的最低限度信息；<br><img src="/cephfs_object/7.png"></p>
+<p>下面简述如何根据dirfrag对象中的信息，检索路径&#x2F;dir1&#x2F;dir2&#x2F;file：<br><img src="/cephfs_object/9.png"></p>
+<ol>
+<li>已知根目录inode单独保存在1.0000.inode对象中，和其他inode不一样，需要特殊对待；</li>
+<li>读取1.0000.inode对象，解码得到root inode，id&#x3D;&#x3D;1，分片数为4；</li>
+<li>字符串”dir1”的哈希值为0x4125，命中0x4000这个分片；</li>
+<li>读取1.4000对象的omap，查询到dir1_head条目，解码得到新的inode，id&#x3D;&#x3D;1001，分片数为2；</li>
+<li>字符串”dir2”的哈希值为0x875a，命中0x8000这个分片；</li>
+<li>读取1001.8000对象，查询到dir2_head条目，解码得到新的inode，id&#x3D;&#x3D;1002，分片数为1；</li>
+<li>字符串”file“的哈希值为0xa834，命中0x0000这个分片；</li>
+<li>读取1002.0000对象，查询到file_head条目，解码得到新的inode，id&#x3D;&#x3D;1003；</li>
+<li>路径已经用完了，本次检索到此结束</li>
+</ol>
+<h1 id="stray对象"><a href="#stray对象" class="headerlink" title="stray对象"></a>stray对象</h1><p>cephfs中有一类特殊的目录叫stray目录，用来保存那些刚删除不久,还没有清理数据的inode，这些目录对用户不可见；<br>stray dirfrag的保存格式和普通dirfrag是一样的，都会在元数据池中生成对应的对象；<br>不同rank的mds拥有各自的stray目录，同时为了避免一个目录下保存过多文件，需要分成多个stray目录来保存，单个stray目录不再进行分片，简化处理逻辑。<br><img src="/cephfs_object/10.png"><br>stray inode id为6xx这种形式，如608、609、60a、60b，并且只有一个哈希值为0000的分片，所以stray dirfrag对象的名称会是608.0000这种样子；<br>stray dirfrag下的dentry都是特殊命名的，以它指向的inode的id作为名称，如果dentry指向一个id&#x3D;&#x3D;1005的inode，那么dentry_name&#x3D;&#x3D;“1005”;<br><img src="/cephfs_object/11.png"><br>stray dirfrag中的dentry都是主链接，不存在多链接的情况；<br>在其他方面，stray dirfrag的表现和普通dirfrag几乎是一样的。</p>
+<h1 id="mdlog对象"><a href="#mdlog对象" class="headerlink" title="mdlog对象"></a>mdlog对象</h1><p>mdlog是cephfs中的日志文件，用于确保分布式事务的原子性和故障恢复；<br>mdlog会按照特定的file_layout，分割成多个等长对象保存在元数据池；<br>mdlog对象名后缀从0000开始依次递增，前缀为2xx的形式，xx表示mds rank id，比如rank 3 mds的日志首对象为203.0000；<br>后缀为0000的对象比较特殊，不记录日志内容，而是记录日志的起始地址，尾地址，过期区间这些信息;<br><img src="/cephfs_object/13.png"><br>日志文件总是不断地追加写，尾地址是单调递增的，但是它的实际对象数是有限的，一般只能保留128个对象，<br>当日志对象数超过阈值后，就需要将早期的对象内容转储后删除掉，并标记对应的地址范围为过期的；<br>故障恢复时会跳过过期区域，从第一个有效地址开始读取播放内容；<br><img src="/cephfs_object/12.png"></p>
+<h1 id="purge-queue对象"><a href="#purge-queue对象" class="headerlink" title="purge_queue对象"></a>purge_queue对象</h1><p>purge_queue其实是一种特殊的日志文件，它的格式和mdlog几乎是一致的，只是保存的内容不太一样；<br>mdlog保存的是元数据操作记录，而purge_queue保存的则是对象清理任务；<br>purge_queue对象以5xx为前缀，xx对应一个rank id；<br><img src="/cephfs_object/14.png"></p>
+<p>每当一个文件被删除后，就会添加一个对象清理任务到purge_queue中，<br><img src="/cephfs_object/15.png"><br>任务详情中要给出inode id，file length，data pool这些信息，以便于后台线程推导出对象名下发删除请求；<br>当一个目录被删除后，它的dirfrag对象也要通过这种方式清理，<br>任务详情要改一下，把file length换成分片数，data pool换成metadata pool；<br><img src="/cephfs_object/16.png"><br>purge_queue的地址空间也是不断递增的，但是它没有对象数量的限制，<br>仅当清理任务完成后，才会把对应purge_queue对象移除掉，<br>所以平时没有删除文件的动作时，我们能只能看到后缀为0000的purge_queue对象</p>
+<h1 id="file对象"><a href="#file对象" class="headerlink" title="file对象"></a>file对象</h1><p>前面所述对象都是放在元数据池的，但是file对象是放在数据池的；<br>file对象顾名思义就是保存文件内容的，它的分割方法和日志文件如出一辙，这里就不重复介绍了；<br>日志文件舍弃了0-4M的地址空间，从4M后开始写入有效内容，<br>而普通文件则会正常使用0-4M的地址空间，从地址为0处开始写入有效内容；<br>对于inode_id&#x3D;&#x3D;1006的16M文件来说，它的file对象有1006.0000，1006.0001，1006.0002，1006.0003；<br>后缀为0000的对象，相比于其他后缀的file对象并无特殊含义；<br>普通文件不允许出现空洞，file对象必须从0000开始连续出现，<br>如果对应地址范围没有找到对象，则认为文件终止，即使后面存在file对象也不会读取；<br><img src="/cephfs_object/17.png"></p>
