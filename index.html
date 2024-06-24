@@ -69,9 +69,50 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-ceph_spawn" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-index" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/23/ceph_spawn/" class="article-date">
+    <a href="/index/" class="article-date">
+  <time class="dt-published" datetime="2024-06-19T03:42:30.914Z" itemprop="datePublished">2024-06-18</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/index/">目录</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WQzGT_3QSt6sPE7Husbd3Q">XEOS 对象存储深度结合 Alluxio 分布式缓存系统， GPU 利用率提高至 90% 以上</a></p>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/re49NBsGjq8YmPQZhF4oQg">Xline 0.7重构性能分析总述</a></p>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/CNZzmazeKqvBCYuK8Od-Dw">DAOS: 一种面向SCM的可扩展高性能存储栈</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/index/" data-id="clxt32xay0001nueq8upd27e2" data-title="目录" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
+    <article id="post-files/ceph_spawn" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/files/ceph_spawn/" class="article-date">
   <time class="dt-published" datetime="2024-05-24T01:34:13.295Z" itemprop="datePublished">2024-05-23</time>
 </a>
     
@@ -83,7 +124,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+      <a class="p-name article-title" href="/files/ceph_spawn/">ceph spawn</a>
     </h1>
   
 
@@ -151,8 +192,8 @@
 </ol>
 <p>这个函数的效果可以分2个视角来看待：</p>
 <ol>
-<li>线程的视角：jump_fcontext将当前线程的栈切换为参数to给定的栈，运行地址也切换为新的，它把原来的栈顶地址和参数vp通过返回值的形式传输到新的上下文，这样就实现了2个上下文间的消息传递，并且新的上下文拥有源栈顶地址可以随时跳转回去。<br><img src="/2024/05/23/ceph_spawn/jump_fcontext.png"></li>
-<li>函数的视角：jump_fcontext似乎和普通的函数没什么区别，它可以用于唤醒参数to代表的目标上下文继续运行，并将参数vp作为消息发送过去，然后当前流程会一直阻塞在jump_fcontext这里，直至收到消息被唤醒，此时jump_fcontext会返回发送方的上下文地址fctx以及消息data。<br><img src="/2024/05/23/ceph_spawn/jump_fcontext2.png"></li>
+<li>线程的视角：jump_fcontext将当前线程的栈切换为参数to给定的栈，运行地址也切换为新的，它把原来的栈顶地址和参数vp通过返回值的形式传输到新的上下文，这样就实现了2个上下文间的消息传递，并且新的上下文拥有源栈顶地址可以随时跳转回去。<br><img src="/files/ceph_spawn/jump_fcontext.png"></li>
+<li>函数的视角：jump_fcontext似乎和普通的函数没什么区别，它可以用于唤醒参数to代表的目标上下文继续运行，并将参数vp作为消息发送过去，然后当前流程会一直阻塞在jump_fcontext这里，直至收到消息被唤醒，此时jump_fcontext会返回发送方的上下文地址fctx以及消息data。<br><img src="/files/ceph_spawn/jump_fcontext2.png"></li>
 </ol>
 <h1 id="callcc"><a href="#callcc" class="headerlink" title="callcc"></a>callcc</h1><p>boost::context::callcc 用于将给定的函数封装到协程中。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">template&lt; typename StackAlloc, typename Fn &gt;</span><br><span class="line">continuation</span><br><span class="line">callcc( std::allocator_arg_t, StackAlloc &amp;&amp; salloc, Fn &amp;&amp; fn) &#123;</span><br><span class="line">    using Record = detail::record&lt; continuation, StackAlloc, Fn &gt;;</span><br><span class="line">    return continuation&#123;</span><br><span class="line">                detail::create_context1&lt; Record &gt;(</span><br><span class="line">                        std::forward&lt; StackAlloc &gt;( salloc), std::forward&lt; Fn &gt;( fn) ) &#125;.resume();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -169,7 +210,7 @@
 <ol>
 <li>使用参数StackAlloc分配了一块内存，使用内存的尾部作为栈顶（栈向低地址延伸）</li>
 <li>在栈顶创建一个record结构，用来保存协程信息，比如栈地址、栈大小、栈分配器、用户函数等</li>
-<li>使用make_fcontext在新的栈顶上（record的上面）伪造一个栈帧，将context_entry函数地址作为返回地址保存在栈帧中（实际的实现会更复杂一些）<br><img src="/2024/05/23/ceph_spawn/3.png"></li>
+<li>使用make_fcontext在新的栈顶上（record的上面）伪造一个栈帧，将context_entry函数地址作为返回地址保存在栈帧中（实际的实现会更复杂一些）<br><img src="/files/ceph_spawn/3.png"></li>
 <li>使用jump_fcontext跳转到伪造的栈帧上，并将record地址作为消息传递过去</li>
 <li>jump_fcontext函数退栈，访问到返回地址时，变成对context_entry函数的调用（这里利用到了jump_fcontext时保存到DI寄存器上的源栈顶地址，作为函数的第一参数，第二参数则继承于jump_fcontext的第二参数vp），而不是返回到上一级（实际上也不存在上一级）</li>
 <li>进入context_entry函数后，先从参数取得record地址缓存到栈上，再通过jump_fcontext跳转回create_context1的上下文，这样两边的跳转通道都建立好了</li>
@@ -188,12 +229,12 @@
 <p>record::deallocate函数通过调用静态方法destroy，对record结构体进行析构，并调用栈分配器的方法摧毁整个协程栈。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void record::deallocate() noexcept &#123;</span><br><span class="line">  destroy( this);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">static void destroy( record * p) noexcept &#123;</span><br><span class="line">  typename std::decay&lt; StackAlloc &gt;::type salloc = std::move( p-&gt;salloc_);</span><br><span class="line">  stack_context sctx = p-&gt;sctx_;</span><br><span class="line">  // deallocate record</span><br><span class="line">  p-&gt;~record();</span><br><span class="line">  // destroy stack with stack allocator</span><br><span class="line">  salloc.deallocate( sctx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，协程的创建、切入、切出、销毁可以用下面一幅图来描述：<br><img src="/2024/05/23/ceph_spawn/4.png"></p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，协程的创建、切入、切出、销毁可以用下面一幅图来描述：<br><img src="/files/ceph_spawn/4.png"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/23/ceph_spawn/" data-id="clwubsfyt000135eq2xzxae4k" data-title="ceph spawn" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/ceph_spawn/" data-id="clxt32xbb0003nueq06vj9xl5" data-title="ceph spawn" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -205,9 +246,9 @@
 
 
   
-    <article id="post-references" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/references" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/18/references/" class="article-date">
+    <a href="/files/references/" class="article-date">
   <time class="dt-published" datetime="2024-05-18T09:06:52.885Z" itemprop="datePublished">2024-05-18</time>
 </a>
     
@@ -219,7 +260,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/18/references/">好文推荐</a>
+      <a class="p-name article-title" href="/files/references/">好文推荐</a>
     </h1>
   
 
@@ -234,7 +275,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/18/references/" data-id="clwubsfz1000235eq9f4x1w69" data-title="好文推荐" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/references/" data-id="clxt32xbm0008nueqa7bb8n2v" data-title="好文推荐" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -246,9 +287,9 @@
 
 
   
-    <article id="post-sst" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/sst" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/13/sst/" class="article-date">
+    <a href="/files/sst/" class="article-date">
   <time class="dt-published" datetime="2024-05-13T16:07:05.286Z" itemprop="datePublished">2024-05-13</time>
 </a>
     
@@ -260,7 +301,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/13/sst/">rocksdb SST格式</a>
+      <a class="p-name article-title" href="/files/sst/">rocksdb SST格式</a>
     </h1>
   
 
@@ -268,7 +309,7 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="SST文件格式"><a href="#SST文件格式" class="headerlink" title="SST文件格式"></a>SST文件格式</h1><p>一个SST文件的格式如下：<br><img src="/2024/05/13/sst/1.png"><br>可以观察到一个SST文件内部划分成多种类型的块：</p>
+        <h1 id="SST文件格式"><a href="#SST文件格式" class="headerlink" title="SST文件格式"></a>SST文件格式</h1><p>一个SST文件的格式如下：<br><img src="/files/sst/1.png"><br>可以观察到一个SST文件内部划分成多种类型的块：</p>
 <ol>
 <li>data block 用来保存一定数量的用户键值对。当data block达到一定尺寸后，就需要生成下一个data block容纳更多的键值对。</li>
 <li>filter block 使用布隆过滤器来加快判断目标key是否位于当前SST文件中</li>
@@ -295,7 +336,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/13/sst/" data-id="clw7mke5a00023deq930h0n54" data-title="rocksdb SST格式" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/sst/" data-id="clxt32xbr000anueq2ho345c0" data-title="rocksdb SST格式" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -307,9 +348,9 @@
 
 
   
-    <article id="post-cephfs_mdcache" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/cephfs_mdcache" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/08/cephfs_mdcache/" class="article-date">
+    <a href="/files/cephfs_mdcache/" class="article-date">
   <time class="dt-published" datetime="2024-05-08T13:37:03.740Z" itemprop="datePublished">2024-05-08</time>
 </a>
     
@@ -321,7 +362,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+      <a class="p-name article-title" href="/files/cephfs_mdcache/">cephfs元数据缓存</a>
     </h1>
   
 
@@ -329,14 +370,14 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="目录树"><a href="#目录树" class="headerlink" title="目录树"></a>目录树</h1><p>为了便于路径检索，元数据采用树的形式组织在缓存中；<br>元数据分为3类：inode、dirfrag、dentry；<br>一个inode可持有多个dirfrag，一个dirfrag包含多个dentry，一个dentry唯一指向一个inode；<br>这里的dirfrag就是一个目录分片，最初的时候一个inode只持有一个dirfrag，<br>随着用户创建更多的文件或子目录，dirfrag中的dentry就会越来越多，<br>达到一定程度后，mds就会将原有的dirfrag分裂成多个新的dirfrag，<br>令dentry重新分配到这些新的dirfrag中，以避免臃肿的目录影响存取效率；<br>dentry分布到哪一个dirfrag中，是由它的name的哈希值决定的；<br>不同的dirfrag对应不同的哈希区间，<br>哈希值落在区间内的dentry就会分配到这个dirfrag中保存；<br>只有目录类型的inode才会持有dirfrag，文件类型的inode没有。<br><img src="/2024/05/08/cephfs_mdcache/18.png"></p>
-<h1 id="日志链表"><a href="#日志链表" class="headerlink" title="日志链表"></a>日志链表</h1><p>随着元数据不断被修改，日志文件会越来越大，达到一定尺寸后，就需要早期的修改flush到元数据池中，然后释放掉相关的日志片段；<br>每当mds提交一个日志记录，日志文件的seq就会+1；<br>mds将日志分为多个LogSegment，每个LogSegment对应一个seq周期，内含多种类型的链表；<br>每个链表都串接着特定类型的元数据，这些元数据都是这个LogSegment周期内被修改过的；<br>这种组织形式的目的是为了方便在日志裁剪时，快速找到需要flush的元数据；<br>LogSegment按照seq排列，便于确定裁剪顺序；而元数据在链表上则没有排列顺序的要求；<br>如果一个元数据在多个周期都修改过，那么它只会链接到最新的LogSegment中；<br>LogSegment只会链接dirty元数据，<br>元数据经过flush变成clean状态后，<br>就会立即从LogSegment中移除；<br>当一个LogSegment上已经没有dirty元数据后，<br>与它相关的日志对象就会随之一起被删除掉。<br><img src="/2024/05/08/cephfs_mdcache/19.png"></p>
-<h1 id="缓存裁剪"><a href="#缓存裁剪" class="headerlink" title="缓存裁剪"></a>缓存裁剪</h1><p>mds以dentry为单位管理LRU，当缓存尺寸超过阈值时，mds就会将靠近LRU尾部的dentry从缓存释放掉；<br>新加入LRU的dentry，会插入到LRU中间3:7的位置，这会将该位置后的dentry向后挤，超过边界的dentry就会被裁剪掉；<br>可见位于插入点之前的dentry会相对安全一些，新插入的dentry并不会动摇它们的地位;<br><img src="/2024/05/08/cephfs_mdcache/20.png"><br>如果一个dentry已经在LRU中，且最近被访问过，那么就会被执行touch操作，提升到LRU头部的位置；<br>虽然touch操作不会改变LRU长度，但是它会将前半部的一个dentry挤到后半部，使之出现被裁剪的风险；<br><img src="/2024/05/08/cephfs_mdcache/21.png"><br>考虑到新加入的dentry可能只是一时热度，后续不再访问，而那些反复访问的dentry才具有常驻热度；<br>为了避免新来的dentry干扰常驻dentry的优先级，将LRU分成2个部分使得这两类dentry分开竞争。</p>
+        <h1 id="目录树"><a href="#目录树" class="headerlink" title="目录树"></a>目录树</h1><p>为了便于路径检索，元数据采用树的形式组织在缓存中；<br>元数据分为3类：inode、dirfrag、dentry；<br>一个inode可持有多个dirfrag，一个dirfrag包含多个dentry，一个dentry唯一指向一个inode；<br>这里的dirfrag就是一个目录分片，最初的时候一个inode只持有一个dirfrag，<br>随着用户创建更多的文件或子目录，dirfrag中的dentry就会越来越多，<br>达到一定程度后，mds就会将原有的dirfrag分裂成多个新的dirfrag，<br>令dentry重新分配到这些新的dirfrag中，以避免臃肿的目录影响存取效率；<br>dentry分布到哪一个dirfrag中，是由它的name的哈希值决定的；<br>不同的dirfrag对应不同的哈希区间，<br>哈希值落在区间内的dentry就会分配到这个dirfrag中保存；<br>只有目录类型的inode才会持有dirfrag，文件类型的inode没有。<br><img src="/files/cephfs_mdcache/18.png"></p>
+<h1 id="日志链表"><a href="#日志链表" class="headerlink" title="日志链表"></a>日志链表</h1><p>随着元数据不断被修改，日志文件会越来越大，达到一定尺寸后，就需要早期的修改flush到元数据池中，然后释放掉相关的日志片段；<br>每当mds提交一个日志记录，日志文件的seq就会+1；<br>mds将日志分为多个LogSegment，每个LogSegment对应一个seq周期，内含多种类型的链表；<br>每个链表都串接着特定类型的元数据，这些元数据都是这个LogSegment周期内被修改过的；<br>这种组织形式的目的是为了方便在日志裁剪时，快速找到需要flush的元数据；<br>LogSegment按照seq排列，便于确定裁剪顺序；而元数据在链表上则没有排列顺序的要求；<br>如果一个元数据在多个周期都修改过，那么它只会链接到最新的LogSegment中；<br>LogSegment只会链接dirty元数据，<br>元数据经过flush变成clean状态后，<br>就会立即从LogSegment中移除；<br>当一个LogSegment上已经没有dirty元数据后，<br>与它相关的日志对象就会随之一起被删除掉。<br><img src="/files/cephfs_mdcache/19.png"></p>
+<h1 id="缓存裁剪"><a href="#缓存裁剪" class="headerlink" title="缓存裁剪"></a>缓存裁剪</h1><p>mds以dentry为单位管理LRU，当缓存尺寸超过阈值时，mds就会将靠近LRU尾部的dentry从缓存释放掉；<br>新加入LRU的dentry，会插入到LRU中间3:7的位置，这会将该位置后的dentry向后挤，超过边界的dentry就会被裁剪掉；<br>可见位于插入点之前的dentry会相对安全一些，新插入的dentry并不会动摇它们的地位;<br><img src="/files/cephfs_mdcache/20.png"><br>如果一个dentry已经在LRU中，且最近被访问过，那么就会被执行touch操作，提升到LRU头部的位置；<br>虽然touch操作不会改变LRU长度，但是它会将前半部的一个dentry挤到后半部，使之出现被裁剪的风险；<br><img src="/files/cephfs_mdcache/21.png"><br>考虑到新加入的dentry可能只是一时热度，后续不再访问，而那些反复访问的dentry才具有常驻热度；<br>为了避免新来的dentry干扰常驻dentry的优先级，将LRU分成2个部分使得这两类dentry分开竞争。</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/08/cephfs_mdcache/" data-id="clw7mke5d00043deq44nihjdd" data-title="cephfs元数据缓存" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/cephfs_mdcache/" data-id="clxt32xbg0005nueqfr7t2vqq" data-title="cephfs元数据缓存" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -348,9 +389,9 @@
 
 
   
-    <article id="post-cephfs_object" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/cephfs_object" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/07/cephfs_object/" class="article-date">
+    <a href="/files/cephfs_object/" class="article-date">
   <time class="dt-published" datetime="2024-05-07T13:36:23.758Z" itemprop="datePublished">2024-05-07</time>
 </a>
     
@@ -362,7 +403,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+      <a class="p-name article-title" href="/files/cephfs_object/">cephfs存储格式</a>
     </h1>
   
 
@@ -370,9 +411,9 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="dirfrag对象"><a href="#dirfrag对象" class="headerlink" title="dirfrag对象"></a>dirfrag对象</h1><p>cephfs的目录支持分片特性，即将一个目录的内容拆分成多个分片保存，每个分片称为一个dirfrag;<br>一个dirfrag对应一段哈希区间，这里取哈希区间的首地址作为dirfrag的哈希值；<br>dirfrag对象，以目录inode的id为前缀，dirfrag的哈希值为后缀命名，中间以”.”号分隔；<br>如果dirfrag属于id&#x3D;&#x3D;1003的inode，它的哈希值为0x8000，那么这个dirfrag的对象名为1003.8000;<br>cephfs将一个dirfrag作为一个对象保存在元数据池中，mds通过读取这些对象可以在缓存中构造出一棵目录树；<br>dirfrag的基本属性，如文件数、子目录数等，会保存在对象的omap_header中；<br>dirfrag包含的每一个dentry，都会作为一条omap entry保存在对象中，存储格式如下：<br><img src="/2024/05/07/cephfs_object/8.png"></p>
-<p>在不考虑快照的情况下，snap_first默认为2，snap_last默认为“head”<br>cephfs支持硬链接，即多个dentry指向相同的inode，因此对于主链接和副链接而言，它们的dentry_value形式有所不同<br>对于主链接的情况，dentry_value &#x3D; dentry_type + inode，这里就是inode结构体的常规保存位置；<br>对于副链接的情况，dentry_value &#x3D; dentry_type + inode_id + inode_type，只提供查找inode的最低限度信息；<br><img src="/2024/05/07/cephfs_object/7.png"></p>
-<p>下面简述如何根据dirfrag对象中的信息，检索路径&#x2F;dir1&#x2F;dir2&#x2F;file：<br><img src="/2024/05/07/cephfs_object/9.png"></p>
+        <h1 id="dirfrag对象"><a href="#dirfrag对象" class="headerlink" title="dirfrag对象"></a>dirfrag对象</h1><p>cephfs的目录支持分片特性，即将一个目录的内容拆分成多个分片保存，每个分片称为一个dirfrag;<br>一个dirfrag对应一段哈希区间，这里取哈希区间的首地址作为dirfrag的哈希值；<br>dirfrag对象，以目录inode的id为前缀，dirfrag的哈希值为后缀命名，中间以”.”号分隔；<br>如果dirfrag属于id&#x3D;&#x3D;1003的inode，它的哈希值为0x8000，那么这个dirfrag的对象名为1003.8000;<br>cephfs将一个dirfrag作为一个对象保存在元数据池中，mds通过读取这些对象可以在缓存中构造出一棵目录树；<br>dirfrag的基本属性，如文件数、子目录数等，会保存在对象的omap_header中；<br>dirfrag包含的每一个dentry，都会作为一条omap entry保存在对象中，存储格式如下：<br><img src="/files/cephfs_object/8.png"></p>
+<p>在不考虑快照的情况下，snap_first默认为2，snap_last默认为“head”<br>cephfs支持硬链接，即多个dentry指向相同的inode，因此对于主链接和副链接而言，它们的dentry_value形式有所不同<br>对于主链接的情况，dentry_value &#x3D; dentry_type + inode，这里就是inode结构体的常规保存位置；<br>对于副链接的情况，dentry_value &#x3D; dentry_type + inode_id + inode_type，只提供查找inode的最低限度信息；<br><img src="/files/cephfs_object/7.png"></p>
+<p>下面简述如何根据dirfrag对象中的信息，检索路径&#x2F;dir1&#x2F;dir2&#x2F;file：<br><img src="/files/cephfs_object/9.png"></p>
 <ol>
 <li>已知根目录inode单独保存在1.0000.inode对象中，和其他inode不一样，需要特殊对待；</li>
 <li>读取1.0000.inode对象，解码得到root inode，id&#x3D;&#x3D;1，分片数为4；</li>
@@ -384,16 +425,16 @@
 <li>读取1002.0000对象，查询到file_head条目，解码得到新的inode，id&#x3D;&#x3D;1003；</li>
 <li>路径已经用完了，本次检索到此结束</li>
 </ol>
-<h1 id="stray对象"><a href="#stray对象" class="headerlink" title="stray对象"></a>stray对象</h1><p>cephfs中有一类特殊的目录叫stray目录，用来保存那些刚删除不久,还没有清理数据的inode，这些目录对用户不可见；<br>stray dirfrag的保存格式和普通dirfrag是一样的，都会在元数据池中生成对应的对象；<br>不同rank的mds拥有各自的stray目录，同时为了避免一个目录下保存过多文件，需要分成多个stray目录来保存，单个stray目录不再进行分片，简化处理逻辑。<br><img src="/2024/05/07/cephfs_object/10.png"><br>stray inode id为6xx这种形式，如608、609、60a、60b，并且只有一个哈希值为0000的分片，所以stray dirfrag对象的名称会是608.0000这种样子；<br>stray dirfrag下的dentry都是特殊命名的，以它指向的inode的id作为名称，如果dentry指向一个id&#x3D;&#x3D;1005的inode，那么dentry_name&#x3D;&#x3D;“1005”;<br><img src="/2024/05/07/cephfs_object/11.png"><br>stray dirfrag中的dentry都是主链接，不存在多链接的情况；<br>在其他方面，stray dirfrag的表现和普通dirfrag几乎是一样的。</p>
-<h1 id="mdlog对象"><a href="#mdlog对象" class="headerlink" title="mdlog对象"></a>mdlog对象</h1><p>mdlog是cephfs中的日志文件，用于确保分布式事务的原子性和故障恢复；<br>mdlog会按照特定的file_layout，分割成多个等长对象保存在元数据池；<br>mdlog对象名后缀从0000开始依次递增，前缀为2xx的形式，xx表示mds rank id，比如rank 3 mds的日志首对象为203.0000；<br>后缀为0000的对象比较特殊，不记录日志内容，而是记录日志的起始地址，尾地址，过期区间这些信息;<br><img src="/2024/05/07/cephfs_object/13.png"><br>日志文件总是不断地追加写，尾地址是单调递增的，但是它的实际对象数是有限的，一般只能保留128个对象，<br>当日志对象数超过阈值后，就需要将早期的对象内容转储后删除掉，并标记对应的地址范围为过期的；<br>故障恢复时会跳过过期区域，从第一个有效地址开始读取播放内容；<br><img src="/2024/05/07/cephfs_object/12.png"></p>
-<h1 id="purge-queue对象"><a href="#purge-queue对象" class="headerlink" title="purge_queue对象"></a>purge_queue对象</h1><p>purge_queue其实是一种特殊的日志文件，它的格式和mdlog几乎是一致的，只是保存的内容不太一样；<br>mdlog保存的是元数据操作记录，而purge_queue保存的则是对象清理任务；<br>purge_queue对象以5xx为前缀，xx对应一个rank id；<br><img src="/2024/05/07/cephfs_object/14.png"></p>
-<p>每当一个文件被删除后，就会添加一个对象清理任务到purge_queue中，<br><img src="/2024/05/07/cephfs_object/15.png"><br>任务详情中要给出inode id，file length，data pool这些信息，以便于后台线程推导出对象名下发删除请求；<br>当一个目录被删除后，它的dirfrag对象也要通过这种方式清理，<br>任务详情要改一下，把file length换成分片数，data pool换成metadata pool；<br><img src="/2024/05/07/cephfs_object/16.png"><br>purge_queue的地址空间也是不断递增的，但是它没有对象数量的限制，<br>仅当清理任务完成后，才会把对应purge_queue对象移除掉，<br>所以平时没有删除文件的动作时，我们能只能看到后缀为0000的purge_queue对象</p>
-<h1 id="file对象"><a href="#file对象" class="headerlink" title="file对象"></a>file对象</h1><p>前面所述对象都是放在元数据池的，但是file对象是放在数据池的；<br>file对象顾名思义就是保存文件内容的，它的分割方法和日志文件如出一辙，这里就不重复介绍了；<br>日志文件舍弃了0-4M的地址空间，从4M后开始写入有效内容，<br>而普通文件则会正常使用0-4M的地址空间，从地址为0处开始写入有效内容；<br>对于inode_id&#x3D;&#x3D;1006的16M文件来说，它的file对象有1006.0000，1006.0001，1006.0002，1006.0003；<br>后缀为0000的对象，相比于其他后缀的file对象并无特殊含义；<br>普通文件不允许出现空洞，file对象必须从0000开始连续出现，<br>如果对应地址范围没有找到对象，则认为文件终止，即使后面存在file对象也不会读取；<br><img src="/2024/05/07/cephfs_object/17.png"></p>
+<h1 id="stray对象"><a href="#stray对象" class="headerlink" title="stray对象"></a>stray对象</h1><p>cephfs中有一类特殊的目录叫stray目录，用来保存那些刚删除不久,还没有清理数据的inode，这些目录对用户不可见；<br>stray dirfrag的保存格式和普通dirfrag是一样的，都会在元数据池中生成对应的对象；<br>不同rank的mds拥有各自的stray目录，同时为了避免一个目录下保存过多文件，需要分成多个stray目录来保存，单个stray目录不再进行分片，简化处理逻辑。<br><img src="/files/cephfs_object/10.png"><br>stray inode id为6xx这种形式，如608、609、60a、60b，并且只有一个哈希值为0000的分片，所以stray dirfrag对象的名称会是608.0000这种样子；<br>stray dirfrag下的dentry都是特殊命名的，以它指向的inode的id作为名称，如果dentry指向一个id&#x3D;&#x3D;1005的inode，那么dentry_name&#x3D;&#x3D;“1005”;<br><img src="/files/cephfs_object/11.png"><br>stray dirfrag中的dentry都是主链接，不存在多链接的情况；<br>在其他方面，stray dirfrag的表现和普通dirfrag几乎是一样的。</p>
+<h1 id="mdlog对象"><a href="#mdlog对象" class="headerlink" title="mdlog对象"></a>mdlog对象</h1><p>mdlog是cephfs中的日志文件，用于确保分布式事务的原子性和故障恢复；<br>mdlog会按照特定的file_layout，分割成多个等长对象保存在元数据池；<br>mdlog对象名后缀从0000开始依次递增，前缀为2xx的形式，xx表示mds rank id，比如rank 3 mds的日志首对象为203.0000；<br>后缀为0000的对象比较特殊，不记录日志内容，而是记录日志的起始地址，尾地址，过期区间这些信息;<br><img src="/files/cephfs_object/13.png"><br>日志文件总是不断地追加写，尾地址是单调递增的，但是它的实际对象数是有限的，一般只能保留128个对象，<br>当日志对象数超过阈值后，就需要将早期的对象内容转储后删除掉，并标记对应的地址范围为过期的；<br>故障恢复时会跳过过期区域，从第一个有效地址开始读取播放内容；<br><img src="/files/cephfs_object/12.png"></p>
+<h1 id="purge-queue对象"><a href="#purge-queue对象" class="headerlink" title="purge_queue对象"></a>purge_queue对象</h1><p>purge_queue其实是一种特殊的日志文件，它的格式和mdlog几乎是一致的，只是保存的内容不太一样；<br>mdlog保存的是元数据操作记录，而purge_queue保存的则是对象清理任务；<br>purge_queue对象以5xx为前缀，xx对应一个rank id；<br><img src="/files/cephfs_object/14.png"></p>
+<p>每当一个文件被删除后，就会添加一个对象清理任务到purge_queue中，<br><img src="/files/cephfs_object/15.png"><br>任务详情中要给出inode id，file length，data pool这些信息，以便于后台线程推导出对象名下发删除请求；<br>当一个目录被删除后，它的dirfrag对象也要通过这种方式清理，<br>任务详情要改一下，把file length换成分片数，data pool换成metadata pool；<br><img src="/files/cephfs_object/16.png"><br>purge_queue的地址空间也是不断递增的，但是它没有对象数量的限制，<br>仅当清理任务完成后，才会把对应purge_queue对象移除掉，<br>所以平时没有删除文件的动作时，我们能只能看到后缀为0000的purge_queue对象</p>
+<h1 id="file对象"><a href="#file对象" class="headerlink" title="file对象"></a>file对象</h1><p>前面所述对象都是放在元数据池的，但是file对象是放在数据池的；<br>file对象顾名思义就是保存文件内容的，它的分割方法和日志文件如出一辙，这里就不重复介绍了；<br>日志文件舍弃了0-4M的地址空间，从4M后开始写入有效内容，<br>而普通文件则会正常使用0-4M的地址空间，从地址为0处开始写入有效内容；<br>对于inode_id&#x3D;&#x3D;1006的16M文件来说，它的file对象有1006.0000，1006.0001，1006.0002，1006.0003；<br>后缀为0000的对象，相比于其他后缀的file对象并无特殊含义；<br>普通文件不允许出现空洞，file对象必须从0000开始连续出现，<br>如果对应地址范围没有找到对象，则认为文件终止，即使后面存在file对象也不会读取；<br><img src="/files/cephfs_object/17.png"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/07/cephfs_object/" data-id="clw7mke5b00033deqbxna8fyf" data-title="cephfs存储格式" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/cephfs_object/" data-id="clxt32xbi0006nueq90wx2dcu" data-title="cephfs存储格式" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -405,9 +446,9 @@
 
 
   
-    <article id="post-mdlog" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/mdlog" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/06/mdlog/" class="article-date">
+    <a href="/files/mdlog/" class="article-date">
   <time class="dt-published" datetime="2024-05-06T13:56:05.364Z" itemprop="datePublished">2024-05-06</time>
 </a>
     
@@ -419,7 +460,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/06/mdlog/">cephfs元数据日志</a>
+      <a class="p-name article-title" href="/files/mdlog/">cephfs元数据日志</a>
     </h1>
   
 
@@ -435,7 +476,7 @@
 </ol>
 <p>第一点很好理解，如果在应答客户端后，写完日志前，mds发生崩溃，客户端和新接任的mds对于同一个请求的完成状态就无法达成共识。</p>
 <p>第二点则是为了避免在元数据同步刷新前，其他mds从数据池读取到了过期的元数据，造成同一个元数据在不同mds上出现分歧的情况。不同mds无法相互读取彼此的日志，而唯有将日志和元数据池内容结合在一起，才能得到最新版本的元数据，因此当一个mds需要读取其他mds负责的元数据的最新内容时，它只能向目标mds发起请求获取，而无法绕过目标mds。</p>
-<p>日志文件会被拆分成多个对象存储在元数据池中，这些对象的命名很有规律，比如rank 0 的日志文件的对象范围为200.00000000-200.ffffffff，rank 1的日志文件的对象范围为201.00000000-201.ffffffff，rank 2的日志文件的对象范围为203.00000000-203.ffffffff，依次类推。日志文件的内容如下：<br><img src="/2024/05/06/mdlog/4.png"></p>
+<p>日志文件会被拆分成多个对象存储在元数据池中，这些对象的命名很有规律，比如rank 0 的日志文件的对象范围为200.00000000-200.ffffffff，rank 1的日志文件的对象范围为201.00000000-201.ffffffff，rank 2的日志文件的对象范围为203.00000000-203.ffffffff，依次类推。日志文件的内容如下：<br><img src="/files/mdlog/4.png"></p>
 <p>日志的基本属性记录在第一个对象中，包括file_layout、write_pos、expire_pos和trimmed_pos。write_pos代表下一条日志项要写入的位置，也等效于当前的日志长度；expire_pos代表日志重放的起始位置，在这个位置前面的内容都是过期的；trimmed_pos代表上一次裁剪的截止位置，在这个位置之前的对象都被删除了（首对象除外）。从大小关系来说，write_pos &gt; expire_pos &gt;&#x3D; trimmed_pos。</p>
 <p>那些已写入日志，但是未同步更新到池中的元数据，会被标记为dirty状态；已经同步更新到池中的元数据会被标记为clean状态。mds清理缓存时只会淘汰那些clean状态的元数据，而忽略dirty状态的元数据。dirty元数据的刷写是一个延迟执行的操作，只有当日志文件保存的内容过多，触发日志裁剪时（MDLog::trim）才会执行。</p>
 <p>LogSegment是一个内存结构，用于对LogEvent进行分组，记录每一批LogEvent对应的日志范围，以及相关dirty元数据有哪些。LogSegment既是dirty元数据的刷写单位，也是日志裁剪单位。日志文件不会实际存储任何LogSegment结构，但是会用一个ESubtreeMap类型的LogEvent标志它的开始（防止日志裁剪后丢失SubtreeMap），每2个ESubtreeMap之间的部分就可以视为一个LogSegment。每当累计写入一定数量的LogEvent（mds_log_events_per_segment，默认为1024），或是写满一个对象组后（object_size * stripe_count），就会新建一个LogSegment，管理新写入的LogEvent。</p>
@@ -445,7 +486,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/06/mdlog/" data-id="clw7mke5e00053deqcuchaiui" data-title="cephfs元数据日志" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/mdlog/" data-id="clxt32xbk0007nueq1hy1a585" data-title="cephfs元数据日志" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -457,9 +498,9 @@
 
 
   
-    <article id="post-cephfs" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/cephfs" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/05/06/cephfs/" class="article-date">
+    <a href="/files/cephfs/" class="article-date">
   <time class="dt-published" datetime="2024-05-06T12:39:16.472Z" itemprop="datePublished">2024-05-06</time>
 </a>
     
@@ -471,7 +512,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/05/06/cephfs/">cephfs概述</a>
+      <a class="p-name article-title" href="/files/cephfs/">cephfs概述</a>
     </h1>
   
 
@@ -479,13 +520,13 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。<br>创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯粹的文件内容。<br>client要针对元数据进行修改时（如create、unlink、rename、setattr等），需要发送请求给mds代为修改，不能直接操作元数据池。<br>client能直接读写数据池，但是也需要从mds得到授权后才能进行。<br>另一方面，mds是能够读写数据池的，比如将文件的backtrace保存在数据池中，或者扫描数据池对象来找回文件大小。<br><img src="/2024/05/06/cephfs/2.1.png"></p>
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>cephfs是一个分布式文件系统，每个cephfs挂载节点都视为一个client。为了确保各个client间的访问不冲突，cephfs设立了专门的mds进程用来管理文件系统元数据。<br>创建一个cephfs时需要提供两种pool用作存储：一种是元数据池（metadata pool，仅限副本策略），提供给mds保存文件系统的元数据；另一种是数据池（data pool，副本或是纠删策略都行），用于保存纯粹的文件内容。<br>client要针对元数据进行修改时（如create、unlink、rename、setattr等），需要发送请求给mds代为修改，不能直接操作元数据池。<br>client能直接读写数据池，但是也需要从mds得到授权后才能进行。<br>另一方面，mds是能够读写数据池的，比如将文件的backtrace保存在数据池中，或者扫描数据池对象来找回文件大小。<br><img src="/files/cephfs/2.1.png"></p>
 <h1 id="Rank"><a href="#Rank" class="headerlink" title="Rank"></a>Rank</h1><p>一个文件系统中可以配置多个mds，但并非每个mds都会参与到工作中，文件系统中的rank数决定了会有多少个mds参与工作。一个rank就是一个工位，一个mds就对应一个工人。初始情况下，文件系统中只有一个rank，当用户配置了多个mds时，只会有一个mds被mon选拔为工作者，其余的mds都处于闲置状态（standby），等待故障接管。rank数的修改，是通过调整文件系统的max_mds参数实现的。</p>
 <p>当文件系统现有的rank数少于max_mds时，如果存在standby mds，则mon会为其新增rank，让这些standby mds进行接管，新增的rank数取决于当前的standby mds有多少，可能会出现“新增rank后总的rank数还是少于max_mds”的情况；如果不存在standby mds，则rank数不会改变。当文件系统的rank数多于max_mds时，则mon会从最后一个rank开始（id最大），命令相应的mds将缓存的元数据迁移到前面的mds上，然后移除这个rank，并将该mds变回standby状态。</p>
 <p>从可用状态来看，rank具有三种类型：up，failed，damaged。up是指那些已被mds接管，能够正常运作的rank；failed是指那些还没有被mds接管，无法运作的rank；damaged是指那些因为元数据异常，而禁止接管的rank。failed和damaged状态的不同之处在于，当存在standby mds时，failed rank能够被接管变为up rank，但是damaged rank则不行，只能在人工修复错误后，通过“ceph mds repaired <rank>”指令来解除该状态。</rank></p>
 <p>从是否启用的角度来看，rank具有两种类型：in和stopped。in rank表示那些被文件系统启用，分配了工作职责的rank；stopped rank表示那些已被停用，不再参与文件系统工作的rank。前面提及的文件系统的rank数，准确地来说应是in rank的数量；被停用的rank不会被删除，而是标记为stopped，等待随时启用。由于每次创建新的rank时，都需要将一些与rank相关的信息写入元数据池，采用改为启用&#x2F;停用的方式，能够免去重新创建这些信息，有助于更快地调整可用rank的数量。</p>
-<h1 id="文件布局（file-layout）"><a href="#文件布局（file-layout）" class="headerlink" title="文件布局（file_layout）"></a>文件布局（file_layout）</h1><p>文件布局描述的是如何将一段文件内容拆分成多个对象进行存储。在上层应用看来，它们读写的都是一段连续的文件内容。但是实际上，写文件时会将内容拆分存储到多个对象上，读文件时会将对象内容拼凑起来再反馈给上层。<br><img src="/2024/05/06/cephfs/1.png"><br>文件布局的几个重要属性如下：<br>1.stripe_unit：一个条带单元的长度<br>2.stripe_count：一个条带中的单元数<br>3.object_size：一个对象的长度<br>写文件前，先准备stripe_count个对象，每个对象的大小为object_size，然后将对象划分为多个stripe_unit；写文件时，先写满第一个对象的一个条带单元后，再继续写下一个对象的一个条带单元，直至写满一个条带；接着又回到第一个对象上，开始写它的第二个条带单元，其他对象也是同理，写对等位置上的条带单元。当一组对象都写满后，再换下一组对象继续写。读文件的过程不再累述，就是把一组对象读出来，按照相同的规则拼凑读取即可。</p>
-<p>下图中，一个方格就是一个条带单元，一行方格就是一个条带，从名字可以看出条带单元所属的共同对象。<br><img src="/2024/05/06/cephfs/2.png"><br>默认的文件布局为：stripe_count &#x3D;&#x3D; 1，stripe_unit &#x3D;&#x3D; object_size。此时相当于不对内容进行条带化，而是直接顺序存储到对象上。<br><img src="/2024/05/06/cephfs/3.png"><br>不同的文件可以采用不同的布局。</p>
+<h1 id="文件布局（file-layout）"><a href="#文件布局（file-layout）" class="headerlink" title="文件布局（file_layout）"></a>文件布局（file_layout）</h1><p>文件布局描述的是如何将一段文件内容拆分成多个对象进行存储。在上层应用看来，它们读写的都是一段连续的文件内容。但是实际上，写文件时会将内容拆分存储到多个对象上，读文件时会将对象内容拼凑起来再反馈给上层。<br><img src="/files/cephfs/1.png"><br>文件布局的几个重要属性如下：<br>1.stripe_unit：一个条带单元的长度<br>2.stripe_count：一个条带中的单元数<br>3.object_size：一个对象的长度<br>写文件前，先准备stripe_count个对象，每个对象的大小为object_size，然后将对象划分为多个stripe_unit；写文件时，先写满第一个对象的一个条带单元后，再继续写下一个对象的一个条带单元，直至写满一个条带；接着又回到第一个对象上，开始写它的第二个条带单元，其他对象也是同理，写对等位置上的条带单元。当一组对象都写满后，再换下一组对象继续写。读文件的过程不再累述，就是把一组对象读出来，按照相同的规则拼凑读取即可。</p>
+<p>下图中，一个方格就是一个条带单元，一行方格就是一个条带，从名字可以看出条带单元所属的共同对象。<br><img src="/files/cephfs/2.png"><br>默认的文件布局为：stripe_count &#x3D;&#x3D; 1，stripe_unit &#x3D;&#x3D; object_size。此时相当于不对内容进行条带化，而是直接顺序存储到对象上。<br><img src="/files/cephfs/3.png"><br>不同的文件可以采用不同的布局。</p>
 <h1 id="存储格式"><a href="#存储格式" class="headerlink" title="存储格式"></a>存储格式</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/07/cephfs_object/">存储格式</a></p>
 <h1 id="元数据日志"><a href="#元数据日志" class="headerlink" title="元数据日志"></a>元数据日志</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/06/mdlog/">元数据日志</a></p>
 <h1 id="元数据缓存"><a href="#元数据缓存" class="headerlink" title="元数据缓存"></a>元数据缓存</h1><p><a target="_blank" rel="noopener" href="http://206.237.11.110:4000/2024/05/08/cephfs_mdcache/">元数据缓存</a></p>
@@ -500,12 +541,12 @@
 <li>excl状态：这个状态下，目标元数据被特定client独占，只有这个client能够操作目标元数据，其他client和mds（包括主mds）都无法操作。以往client需要修改元数据时，需要先向主mds请求，得到应答后再作用于本地，现在有了特权后，可以直接先在本地修改，把流程走下去，最后再将所有改动合并成一个请求发送给mds进行更新，极大地提升了效率。</li>
 </ol>
 <p>上述状态的划分只是一个粗略的表述，在不同类型的锁上这些状态的表现效果会略有差异。</p>
-<p>cephfs的分布式锁流程十分复杂，这里只能提供一个粗略的示意图：<br><img src="/2024/05/06/cephfs/22.png"></p>
+<p>cephfs的分布式锁流程十分复杂，这里只能提供一个粗略的示意图：<br><img src="/files/cephfs/22.png"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/06/cephfs/" data-id="clw7mke5100003deqd6p3huz7" data-title="cephfs概述" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/cephfs/" data-id="clxt32xbd0004nueq9vu03cua" data-title="cephfs概述" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -517,9 +558,9 @@
 
 
   
-    <article id="post-bluestore" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/bluestore" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/04/26/bluestore/" class="article-date">
+    <a href="/files/bluestore/" class="article-date">
   <time class="dt-published" datetime="2024-04-26T15:13:06.769Z" itemprop="datePublished">2024-04-26</time>
 </a>
     
@@ -531,7 +572,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/04/26/bluestore/">Bluestore存储结构</a>
+      <a class="p-name article-title" href="/files/bluestore/">Bluestore存储结构</a>
     </h1>
   
 
@@ -549,7 +590,7 @@
 <p>其中LEGACY_FLAG_MUTABLE是个废弃的标志，它等价于（flags &amp;（FLAG_COMPRESSED | FLAG_SHARED））&#x3D;&#x3D; 0</p>
 <h2 id="Extent"><a href="#Extent" class="headerlink" title="Extent"></a>Extent</h2><p>Blob只是作为磁盘分配器单次申请的逻辑单位，并不能表示对象的空间映射关系，所以还需要增加一个Extent结构来表示对象的一个逻辑段，记录到blob的映射关系。<br>同时磁盘分配器一次分配的逻辑长度可能会超过实际所需的长度（为了减少磁盘碎片化），使用Extent也能更精确地反映出对象实际使用的部分。<br>Extent的基本属性如下：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">struct Extent: public ExtentBase &#123;</span><br><span class="line">    uint32_t logical_offset = 0;</span><br><span class="line">    uint32_t blob_offset = 0;</span><br><span class="line">    uint32_t length = 0;</span><br><span class="line">    BlobRef blob;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>Extent的主要成员有4个，分别表示对象内的逻辑偏移量、相对于blob起始地址的偏移量、区段长度和所属的blob。<br><img src="/2024/04/26/bluestore/2.png"></p>
+<p>Extent的主要成员有4个，分别表示对象内的逻辑偏移量、相对于blob起始地址的偏移量、区段长度和所属的blob。<br><img src="/files/bluestore/2.png"></p>
 <h2 id="ExtentMap"><a href="#ExtentMap" class="headerlink" title="ExtentMap"></a>ExtentMap</h2><p>同一个对象下的所有逻辑区段（Extent）组成一个ExtentMap。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">struct ExtentMap &#123;</span><br><span class="line">    typedef boost::intrusive::set&lt;Extent&gt; extent_map_t;</span><br><span class="line">    extent_map_t extent_map;</span><br><span class="line">    blob_map_t spanning_blob_map;</span><br><span class="line">    vector&lt;Shard&gt; shards;</span><br><span class="line">    bufferlist inline_bl;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 <p>spanning_blob_map用来记录被多个shard共享的blob，和常规的blob分开保存。<br>inline_bl用来缓存extent_map的编码结果，它的编码形式为：</p>
@@ -571,7 +612,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/04/26/bluestore/" data-id="clvgtb5x30001woeq19l812as" data-title="Bluestore存储结构" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/bluestore/" data-id="clxt32xb60002nueqh2km1wxk" data-title="Bluestore存储结构" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -583,9 +624,9 @@
 
 
   
-    <article id="post-samba" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-files/samba" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2024/04/23/samba/" class="article-date">
+    <a href="/files/samba/" class="article-date">
   <time class="dt-published" datetime="2024-04-23T13:25:13.000Z" itemprop="datePublished">2024-04-23</time>
 </a>
     
@@ -597,7 +638,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2024/04/23/samba/">samba</a>
+      <a class="p-name article-title" href="/files/samba/">samba</a>
     </h1>
   
 
@@ -605,13 +646,13 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="QA"><a href="#QA" class="headerlink" title="QA"></a>QA</h1><p>（1）为什么我使用本地用户认证无法挂载cifs共享目录？<br><img src="/2024/04/23/samba/1.jpg"><br>答：检查一下samba服务端能否ping通自己的节点名，如果不行，在&#x2F;etc&#x2F;hosts文件中把节点名加到127.0.0.1后面，再试试看能否挂载cifs共享目录。这个问题的发生可能和ntlm认证有关</p>
+        <h1 id="QA"><a href="#QA" class="headerlink" title="QA"></a>QA</h1><p>（1）为什么我使用本地用户认证无法挂载cifs共享目录？<br><img src="/files/samba/1.jpg"><br>答：检查一下samba服务端能否ping通自己的节点名，如果不行，在&#x2F;etc&#x2F;hosts文件中把节点名加到127.0.0.1后面，再试试看能否挂载cifs共享目录。这个问题的发生可能和ntlm认证有关</p>
 <p>（2）我的samba配置了AD域用户组认证，但是使用这个用户组内的用户登录时却失败了，这是为什么？<br>答：原因在于smb.conf中如果没有显式地指定用户组所在的AD域，那么samba会自动推导这个用户组所在的AD域，这有可能得到一个错误的结果，导致认证失败。<br>只有以下两种情况能够在AD域用户组前面省略域名，写成”@group_name”的形式：</p>
 <ol>
 <li>smb.conf中”winbind use default domain &#x3D; yes”，并且workgroup和AD域名的简写一致</li>
 <li>netbios name 和 AD域名的简写一致<br>其他情况下需要在AD域用户组前面加上域名，写成”@realm_name&#x2F;group_name”的形式</li>
 </ol>
-<p>以下是AD域用户组组认证代码的调用路径：<br><img src="/2024/04/23/samba/2.jpg"></p>
+<p>以下是AD域用户组组认证代码的调用路径：<br><img src="/files/samba/2.jpg"></p>
 <p>在token_contains_name环节，检查到名称的第一个字符是@或&amp;或+，就会把后面的字符串当作组名来对待<br>在lookup_name_smbconf这个环节，它分为以下几个步骤：</p>
 <ol>
 <li>检查组名是否携带AD域名，如果携带AD域名，那么使用给定的AD域名查询组</li>
@@ -621,18 +662,18 @@
 </ol>
 <p>如果上述步骤都未找到匹配的组，那么本次AD域用户组认证失败</p>
 <p>（3） 为什么我的winbind服务在正常运行，但是使用wbinfo -u 查询域用户时却提示“check_winbind_security: wbcAuthenticateUserEx failed: WBC_ERR_WINBIND_NOT_AVAILABLE”？<br>答：用ldd查看一下wbinfo的依赖库路径是否正确，尤其是libwbclient.so，你的环境上有可能存在多个libwbclient.so，而wbinfo引用了错误的libwbclient.so导致未能成功向winbind发送请求</p>
-<p>（4）为什么我在使用“net ads join”添加节点到AD域时，提示“failed to find DC for domain”<br><img src="/2024/04/23/samba/3.jpg"><br>答：&#x2F;etc&#x2F;resolv.conf没有写AD域服务器ip</p>
-<p>（5）为什么我在使用“net ads join”添加节点到AD域时，提示“Cannot contact any KDC for requested realm”<br><img src="/2024/04/23/samba/4.jpg"><br>答：可能是当前节点和AD域服务器之间跨越了太多网段，而kerberos协议默认使用udp传输，很容易丢包引起认证失败<br>解决方案是修改&#x2F;etc&#x2F;krb5.conf：<br>[libdefaults]<br>udp_preference_limit &#x3D; 1<br>参考链接：<br><a target="_blank" rel="noopener" href="https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166">https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166</a></p>
-<p>（6）为什么我试图通过AD域认证登录samba目录时，log.smbd打印如下错误：<br><img src="/2024/04/23/samba/5.jpg"><br>答：可能是winbind服务没有成功启动，检查一下它出了什么问题</p>
-<p>（7）为什么我在使用“net ads join”添加节点到AD域时，提示“An invalid parameter was passed to a service or function”<br><img src="/2024/04/23/samba/6.jpg"><br>答：kerberos认证信息中包含时间校验，因此当前节点和域服务器的时差不能过大，否则会判定为认证失败</p>
-<p>（8）为什么节点加域时提示：None of the information to be translated has been translated<br>答：这个其实是指你根据一个netbios name 去查找对应的rid 时，AD域服务器没有找到这项映射<br><img src="/2024/04/23/samba/7.jpg"><br>从上图可以看到一开始节点试图为自己创建一个账户，但是AD域服务器提示这个用户已存在，然后节点才试图根据名称查找rid<br>这种情况一般是AD域服务器上残留了名称相同的其他账户信息，需要将其清理后，才能使当前节点完成加域流程<br>在Active Directory用户和计算机–&gt;域名–&gt;Computers栏目找到同名记录并删除就行了<br><img src="/2024/04/23/samba/8.jpg"></p>
-<p>（9）为什么我的节点“net ads testjoin”是一开始OK的，后面又提示“Join to domain is not valid: The attempted logon is invalid. This is either due to a bad username or authentication information”<br><img src="/2024/04/23/samba/9.jpg"><br>答：检查一下是不是有其他节点使用了相同的netbios_name，覆写了AD域服务器上的认证信息，导致当前节点的凭据失效<br>为了验证这个猜想，你可以在AD域服务器上删除这个节点，然后使用wireshark抓包，观察一段时间看看是否有其他节点将其重新注册<br><img src="/2024/04/23/samba/10.jpg"></p>
+<p>（4）为什么我在使用“net ads join”添加节点到AD域时，提示“failed to find DC for domain”<br><img src="/files/samba/3.jpg"><br>答：&#x2F;etc&#x2F;resolv.conf没有写AD域服务器ip</p>
+<p>（5）为什么我在使用“net ads join”添加节点到AD域时，提示“Cannot contact any KDC for requested realm”<br><img src="/files/samba/4.jpg"><br>答：可能是当前节点和AD域服务器之间跨越了太多网段，而kerberos协议默认使用udp传输，很容易丢包引起认证失败<br>解决方案是修改&#x2F;etc&#x2F;krb5.conf：<br>[libdefaults]<br>udp_preference_limit &#x3D; 1<br>参考链接：<br><a target="_blank" rel="noopener" href="https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166">https://community.cloudera.com/t5/Community-Articles/Why-you-should-always-set-udp-preference-limit-to-1-instead/ta-p/336166</a></p>
+<p>（6）为什么我试图通过AD域认证登录samba目录时，log.smbd打印如下错误：<br><img src="/files/samba/5.jpg"><br>答：可能是winbind服务没有成功启动，检查一下它出了什么问题</p>
+<p>（7）为什么我在使用“net ads join”添加节点到AD域时，提示“An invalid parameter was passed to a service or function”<br><img src="/files/samba/6.jpg"><br>答：kerberos认证信息中包含时间校验，因此当前节点和域服务器的时差不能过大，否则会判定为认证失败</p>
+<p>（8）为什么节点加域时提示：None of the information to be translated has been translated<br>答：这个其实是指你根据一个netbios name 去查找对应的rid 时，AD域服务器没有找到这项映射<br><img src="/files/samba/7.jpg"><br>从上图可以看到一开始节点试图为自己创建一个账户，但是AD域服务器提示这个用户已存在，然后节点才试图根据名称查找rid<br>这种情况一般是AD域服务器上残留了名称相同的其他账户信息，需要将其清理后，才能使当前节点完成加域流程<br>在Active Directory用户和计算机–&gt;域名–&gt;Computers栏目找到同名记录并删除就行了<br><img src="/files/samba/8.jpg"></p>
+<p>（9）为什么我的节点“net ads testjoin”是一开始OK的，后面又提示“Join to domain is not valid: The attempted logon is invalid. This is either due to a bad username or authentication information”<br><img src="/files/samba/9.jpg"><br>答：检查一下是不是有其他节点使用了相同的netbios_name，覆写了AD域服务器上的认证信息，导致当前节点的凭据失效<br>为了验证这个猜想，你可以在AD域服务器上删除这个节点，然后使用wireshark抓包，观察一段时间看看是否有其他节点将其重新注册<br><img src="/files/samba/10.jpg"></p>
 <p>（10）为什么我在centos 7上尝试用本地用户登录cifs共享目录，却提示”is write-protected, mounting read-only”（samba server配置了AD域认证）<br>答：<br>因为在旧版代码中，cifs client在收到NTLM_NEGITIATE的应答后（”Session Setup Response, Error: STATUS_MORE_PROCESSING_REQUIRED, NTLMSSP_CHALLENGE”）<br>在mount命令未指定domain的情况下，会从报文中提取出服务端的domain信息，自动填充到下一阶段的NTLMSSP_AUTH请求中，<br>这样一来，samba server会认为client试图以一个域用户的身份去登录，自然就无法找到这个用户，而判定没有登录权限，<br>一个简单的解决办法是，在mount options 中随便指定一个不存在的domain来登录（mount -o domain&#x3D;unknown），这样cifs client 就不会自动填充domain，<br>而samba server检查到这个domain无效就会仍按照本地用户去识别，这样就能以本地用户的身份登录成功了<br>在centos 8中这个问题已经由如下commit修复，它通过增加了一个domainauto选项，来默认禁用domain的自动填充功能<br><a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/commit/395664439c4945e4827543e3ca80f7b74e1bf733">Fix default behaviour for empty domains and add domainauto option · torvalds&#x2F;linux@3956644 · GitHub</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/04/23/samba/" data-id="clw7mke5700013deq77107iaw" data-title="samba" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/files/samba/" data-id="clxt32xbo0009nueq0nfr8dzm" data-title="samba" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -662,7 +703,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/06/">June 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
     </div>
   </div>
 
@@ -675,23 +716,23 @@
       <ul>
         
           <li>
-            <a href="/2024/05/23/ceph_spawn/">ceph spawn</a>
+            <a href="/index/">目录</a>
           </li>
         
           <li>
-            <a href="/2024/05/18/references/">好文推荐</a>
+            <a href="/files/ceph_spawn/">ceph spawn</a>
           </li>
         
           <li>
-            <a href="/2024/05/13/sst/">rocksdb SST格式</a>
+            <a href="/files/references/">好文推荐</a>
           </li>
         
           <li>
-            <a href="/2024/05/08/cephfs_mdcache/">cephfs元数据缓存</a>
+            <a href="/files/sst/">rocksdb SST格式</a>
           </li>
         
           <li>
-            <a href="/2024/05/07/cephfs_object/">cephfs存储格式</a>
+            <a href="/files/cephfs_mdcache/">cephfs元数据缓存</a>
           </li>
         
       </ul>
