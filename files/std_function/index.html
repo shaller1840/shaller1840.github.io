@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>std::function | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="lambda对象lambda对象占用的空间取决于捕获列表。当捕获列表为空时，lambda对象也会占用1个字节的大小；当捕获列表非空时，可以把捕获列表视为一个tuple，这个tuple的大小即为lambda对象的大小（考虑内存对齐）；当使用[&amp;]或[&#x3D;]全捕获时，根据实际使用的变量数推导出捕获列表, 从而确定lambda对象的大小。 123456789101112131415161">
+<meta property="og:type" content="article">
+<meta property="og:title" content="std::function">
+<meta property="og:url" content="http://example.com/files/std_function/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="lambda对象lambda对象占用的空间取决于捕获列表。当捕获列表为空时，lambda对象也会占用1个字节的大小；当捕获列表非空时，可以把捕获列表视为一个tuple，这个tuple的大小即为lambda对象的大小（考虑内存对齐）；当使用[&amp;]或[&#x3D;]全捕获时，根据实际使用的变量数推导出捕获列表, 从而确定lambda对象的大小。 123456789101112131415161">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2024-07-23T14:39:29.138Z">
+<meta property="article:modified_time" content="2024-07-24T16:23:30.507Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-files/std_function" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/files/std_function/" class="article-date">
+  <time class="dt-published" datetime="2024-07-23T14:39:29.138Z" itemprop="datePublished">2024-07-23</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      std::function
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="lambda对象"><a href="#lambda对象" class="headerlink" title="lambda对象"></a>lambda对象</h1><p>lambda对象占用的空间取决于捕获列表。<br>当捕获列表为空时，lambda对象也会占用1个字节的大小；<br>当捕获列表非空时，可以把捕获列表视为一个tuple，这个tuple的大小即为lambda对象的大小（考虑内存对齐）；<br>当使用[&amp;]或[&#x3D;]全捕获时，根据实际使用的变量数推导出捕获列表, 从而确定lambda对象的大小。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">[root@node test]# cat test4.cc</span><br><span class="line">#include &lt;iostream&gt;</span><br><span class="line">#include &lt;functional&gt;</span><br><span class="line"></span><br><span class="line">using namespace std;</span><br><span class="line"></span><br><span class="line">int main() &#123;</span><br><span class="line">        int x,y,z;</span><br><span class="line">        auto f1 = []&#123;&#125;;</span><br><span class="line">        auto f2 = [&amp;x]&#123;&#125;;</span><br><span class="line">        auto f3 = [x]&#123;&#125;;</span><br><span class="line">        auto f4 = [x,&amp;y]&#123;&#125;;</span><br><span class="line">        auto f5 = [&amp;]&#123; x = 1; &#125;;</span><br><span class="line">        auto f6 = [&amp;]&#123; x = y = 1; &#125;;</span><br><span class="line">        cout &lt;&lt; sizeof(f1) &lt;&lt; endl;</span><br><span class="line">        cout &lt;&lt; sizeof(f2) &lt;&lt; endl;</span><br><span class="line">        cout &lt;&lt; sizeof(f3) &lt;&lt; endl;</span><br><span class="line">        cout &lt;&lt; sizeof(f4) &lt;&lt; endl;</span><br><span class="line">        cout &lt;&lt; sizeof(f5) &lt;&lt; endl;</span><br><span class="line">        cout &lt;&lt; sizeof(f6) &lt;&lt; endl;</span><br><span class="line">        return 0;</span><br><span class="line">&#125;</span><br><span class="line">[root@node test]# ./test4++</span><br><span class="line">1</span><br><span class="line">8</span><br><span class="line">4</span><br><span class="line">16</span><br><span class="line">8</span><br><span class="line">16</span><br></pre></td></tr></table></figure>
+
+<h1 id="构造std-function"><a href="#构造std-function" class="headerlink" title="构造std::function"></a>构造std::function</h1><p>std::function 本身占用32字节的空间，它的构造函数如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">template&lt;typename _Res, typename... _ArgTypes&gt;</span><br><span class="line">    template&lt;typename _Functor, typename, typename&gt;</span><br><span class="line">      function&lt;_Res(_ArgTypes...)&gt;::</span><br><span class="line">        function(_Functor __f)</span><br><span class="line">            : _Function_base()</span><br><span class="line">        &#123;</span><br><span class="line">            typedef _Function_handler&lt;_Res(_ArgTypes...), _Functor&gt; _My_handler;</span><br><span class="line"></span><br><span class="line">            if (_My_handler::_M_not_empty_function(__f))</span><br><span class="line">            &#123;</span><br><span class="line">                _My_handler::_M_init_functor(_M_functor, std::move(__f));</span><br><span class="line">                _M_invoker = &amp;_My_handler::_M_invoke;</span><br><span class="line">                _M_manager = &amp;_My_handler::_M_manager;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure>
+<p>std::function 的成员有三个：_M_functor、_M_invoker、_M_manager<br>_M_functor 用来保存传入的可调用对象<br>_M_invoker 用来指向函数处理方法<br>_M_manager 用来指向数据管理方法<br>构造函数就是对这三个成员进行初始化</p>
+<p>_M_invoker 和 _M_manager 都是函数指针类型<br>_M_functor实际上是一个16字节的联合体，可用来保存对象指针、普通函数指针或成员函数指针<br>它提供了_M_access方法用来获取自身的首地址并转换成任意类型</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">union _Nocopy_types</span><br><span class="line">&#123;</span><br><span class="line">    void*       _M_object;</span><br><span class="line">    const void* _M_const_object;</span><br><span class="line">    void (*_M_function_pointer)();</span><br><span class="line">    void (_Undefined_class::*_M_member_pointer)();</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">union [[gnu::may_alias]] _Any_data</span><br><span class="line">&#123;</span><br><span class="line">    void*       _M_access()       &#123; return &amp;_M_pod_data[0]; &#125;</span><br><span class="line">    const void* _M_access() const &#123; return &amp;_M_pod_data[0]; &#125;</span><br><span class="line"></span><br><span class="line">    template&lt;typename _Tp&gt;</span><br><span class="line">        _Tp&amp;</span><br><span class="line">        _M_access()</span><br><span class="line">        &#123; return *static_cast&lt;_Tp*&gt;(_M_access()); &#125;</span><br><span class="line"></span><br><span class="line">    template&lt;typename _Tp&gt;</span><br><span class="line">        const _Tp&amp;</span><br><span class="line">        _M_access() const</span><br><span class="line">        &#123; return *static_cast&lt;const _Tp*&gt;(_M_access()); &#125;</span><br><span class="line"></span><br><span class="line">    _Nocopy_types _M_unused;</span><br><span class="line">    char _M_pod_data[sizeof(_Nocopy_types)];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>成员_M_functor采用_M_init_functor方法进行初始化</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">static void</span><br><span class="line">	_M_init_functor(_Any_data&amp; __functor, _Functor&amp;&amp; __f)</span><br><span class="line">	&#123; _M_init_functor(__functor, std::move(__f), _Local_storage()); &#125;</span><br></pre></td></tr></table></figure>
+<p>_M_init_functor有两种形式，<br>一种是直接将可调用对象保存在_M_functor内部，<br>另一种则是动态分配空间保存可调用对象，然后将分配的地址保存在_M_functor中</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">static void</span><br><span class="line">_M_init_functor(_Any_data&amp; __functor, _Functor&amp;&amp; __f, true_type)</span><br><span class="line">&#123; ::new (__functor._M_access()) _Functor(std::move(__f)); &#125;</span><br><span class="line"></span><br><span class="line">static void</span><br><span class="line">_M_init_functor(_Any_data&amp; __functor, _Functor&amp;&amp; __f, false_type)</span><br><span class="line">&#123; __functor._M_access&lt;_Functor*&gt;() = new _Functor(std::move(__f)); &#125;</span><br></pre></td></tr></table></figure>
+<p>具体采用哪种方式由_Local_storage方法来决定，<br>_Local_storage方法会检查可调用对象的类型，看看它是否满足地址不变性、内存对齐要求和大小要求，<br>通常而言，当可调用对象的大小不超过16字节时，就会采用本地存储的方式（内存对齐和地址不变性一般都能满足）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">static const std::size_t _M_max_size = sizeof(_Nocopy_types);</span><br><span class="line">static const std::size_t _M_max_align = __alignof__(_Nocopy_types);</span><br><span class="line"></span><br><span class="line">static const bool __stored_locally =</span><br><span class="line">	(__is_location_invariant&lt;_Functor&gt;::value</span><br><span class="line">	 &amp;&amp; sizeof(_Functor) &lt;= _M_max_size</span><br><span class="line">	 &amp;&amp; __alignof__(_Functor) &lt;= _M_max_align</span><br><span class="line">	 &amp;&amp; (_M_max_align % __alignof__(_Functor) == 0));</span><br><span class="line"></span><br><span class="line">typedef integral_constant&lt;bool, __stored_locally&gt; _Local_storage;</span><br></pre></td></tr></table></figure>
+<p>因此如果不希望在初始化std::function时额外分配内存，应该将可调用对象的大小控制在16字节以内</p>
+<h1 id="调用std-function"><a href="#调用std-function" class="headerlink" title="调用std::function"></a>调用std::function</h1><p>当std::function被调用时，它会通过_M_invoker方法，从M_functor提取可调用对象，然后将参数传递给可调用对象执行</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">template&lt;typename _Res, typename... _ArgTypes&gt;</span><br><span class="line">_Res</span><br><span class="line">function&lt;_Res(_ArgTypes...)&gt;::</span><br><span class="line">operator()(_ArgTypes... __args) const</span><br><span class="line">&#123;</span><br><span class="line">    if (_M_empty())</span><br><span class="line">        __throw_bad_function_call();</span><br><span class="line">    return _M_invoker(_M_functor, std::forward&lt;_ArgTypes&gt;(__args)...);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">template&lt;typename _Res, typename _Functor, typename... _ArgTypes&gt;</span><br><span class="line">class _Function_handler&lt;_Res(_ArgTypes...), _Functor&gt;</span><br><span class="line">    : public _Function_base::_Base_manager&lt;_Functor&gt;</span><br><span class="line">&#123;</span><br><span class="line">    typedef _Function_base::_Base_manager&lt;_Functor&gt; _Base;</span><br><span class="line"></span><br><span class="line">public:</span><br><span class="line">    static _Res</span><br><span class="line">    _M_invoke(const _Any_data&amp; __functor, _ArgTypes&amp;&amp;... __args)</span><br><span class="line">    &#123;</span><br><span class="line">        return (*_Base::_M_get_pointer(__functor))(</span><br><span class="line">            std::forward&lt;_ArgTypes&gt;(__args)...);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这里利用到了_M_get_pointer方法依据存储方式从_M_functor提取可调用对象的首地址</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// Retrieve a pointer to the function object</span><br><span class="line">static _Functor*</span><br><span class="line">_M_get_pointer(const _Any_data&amp; __source)</span><br><span class="line">&#123;</span><br><span class="line">    const _Functor* __ptr =</span><br><span class="line">    __stored_locally? std::__addressof(__source._M_access&lt;_Functor&gt;())</span><br><span class="line">    /* have stored a pointer */ : __source._M_access&lt;_Functor*&gt;();</span><br><span class="line">    return const_cast&lt;_Functor*&gt;(__ptr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="析构std-function"><a href="#析构std-function" class="headerlink" title="析构std::function"></a>析构std::function</h1><p>当std::function析构时，会采用_M_manager处理</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">~_Function_base()</span><br><span class="line">&#123;</span><br><span class="line">    if (_M_manager)</span><br><span class="line">        _M_manager(_M_functor, _M_functor, __destroy_functor);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>_M_manager能支持4种请求：获取可调用对象类型、获取可调用对象指针、复制可调用对象、销毁可调用对象</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">static bool</span><br><span class="line">_M_manager(_Any_data&amp; __dest, const _Any_data&amp; __source,</span><br><span class="line">        _Manager_operation __op)</span><br><span class="line">&#123;</span><br><span class="line">    switch (__op)</span><br><span class="line">    &#123;</span><br><span class="line">#if __cpp_rtti</span><br><span class="line">    case __get_type_info:</span><br><span class="line">        __dest._M_access&lt;const type_info*&gt;() = &amp;typeid(_Functor);</span><br><span class="line">        break;</span><br><span class="line">#endif</span><br><span class="line">    case __get_functor_ptr:</span><br><span class="line">        __dest._M_access&lt;_Functor*&gt;() = _M_get_pointer(__source);</span><br><span class="line">        break;</span><br><span class="line"></span><br><span class="line">    case __clone_functor:</span><br><span class="line">        _M_clone(__dest, __source, _Local_storage());</span><br><span class="line">        break;</span><br><span class="line"></span><br><span class="line">    case __destroy_functor:</span><br><span class="line">        _M_destroy(__dest, _Local_storage());</span><br><span class="line">        break;</span><br><span class="line">    &#125;</span><br><span class="line">    return false;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这里使用的是_M_destroy方法，针对本地存储只需执行析构函数即可；针对非本地存储，则是通过delete析构并释放内存</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">// Destroying a location-invariant object may still require</span><br><span class="line">// destruction.</span><br><span class="line">static void</span><br><span class="line">_M_destroy(_Any_data&amp; __victim, true_type)</span><br><span class="line">&#123;</span><br><span class="line">    __victim._M_access&lt;_Functor&gt;().~_Functor();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// Destroying an object located on the heap.</span><br><span class="line">static void</span><br><span class="line">_M_destroy(_Any_data&amp; __victim, false_type)</span><br><span class="line">&#123;</span><br><span class="line">    delete __victim._M_access&lt;_Functor*&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/files/std_function/" data-id="clz02472c0000d9eq3tbu96k8" data-title="std::function" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/files/big5/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">BIG5编码介绍</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/07/">July 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/06/">June 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/files/std_function/">std::function</a>
+          </li>
+        
+          <li>
+            <a href="/files/big5/">BIG5编码介绍</a>
+          </li>
+        
+          <li>
+            <a href="/index/">目录</a>
+          </li>
+        
+          <li>
+            <a href="/files/ceph_spawn/">ceph spawn</a>
+          </li>
+        
+          <li>
+            <a href="/files/references/">好文推荐</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2024 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
